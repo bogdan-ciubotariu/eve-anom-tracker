@@ -72,7 +72,8 @@ export default function App() {
       let database: any;
 
       if (isTauri) {
-        database = await Database.load('sqlite:anomtracker.db');
+        const dbName = import.meta.env.DEV ? 'sqlite:anomtracker_dev.db' : 'sqlite:anomtracker.db';
+        database = await Database.load(dbName);
         await database.execute(`
           CREATE TABLE IF NOT EXISTS anom_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -246,7 +247,7 @@ export default function App() {
       )}
 
       <div className="mb-6">
-        <label className="block text-xs font-semibold text-[#00e5ff] uppercase tracking-wider mb-2">
+        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
           Site Type
         </label>
         <select
@@ -326,7 +327,7 @@ export default function App() {
       </button>
 
       <div className="flex-1">
-        <h2 className="text-xs font-semibold text-[#00e5ff] uppercase tracking-wider mb-3 border-b border-[#00e5ff]/30 pb-1">
+        <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-3 border-b border-[#f0b419]/30 pb-1">
           Recent History
         </h2>
         <div className="space-y-2">
@@ -408,7 +409,7 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#141414] border border-[#f0b419]/50 text-[#f0b419] px-4 py-2 rounded shadow-[0_0_10px_rgba(240,180,25,0.2)] text-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[328px] text-center whitespace-nowrap bg-[#141414] border border-[#f0b419]/50 text-[#f0b419] px-4 py-2 rounded shadow-[0_0_10px_rgba(240,180,25,0.2)] text-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           {toastMessage}
         </div>
       )}
