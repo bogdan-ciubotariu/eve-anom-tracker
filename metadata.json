@@ -1,0 +1,5 @@
+{
+  "name": "EVE AnomTracker",
+  "description": "A lightweight desktop app for EVE Online Anomaly Tracking",
+  "requestFramePermissions": []
+}
