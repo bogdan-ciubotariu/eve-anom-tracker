@@ -4,5 +4,5 @@
 )]
 
 fn main() {
-    anomtracker_lib::run();
+    anomtracker::run();
 }

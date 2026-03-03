@@ -1,6 +1,6 @@
 {
-  "productName": "AnomTracker",
-  "version": "0.1.0",
+  "productName": "EVE AnomTracker",
+  "version": "0.1.0-alpha",
   "identifier": "com.anomtracker.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,9 +12,9 @@
     "windows": [
       {
         "label": "main",
-        "title": "AnomTracker",
+        "title": "EVE AnomTracker",
         "width": 360,
-        "height": 800,
+        "height": 720,
         "resizable": false,
         "fullscreen": false
       }
@@ -28,7 +28,10 @@
           "windows": ["main"],
           "permissions": [
             "core:default",
-            "sql:default"
+            "sql:default",
+            "sql:allow-load",
+            "sql:allow-execute",
+            "sql:allow-select"
           ]
         }
       ]
