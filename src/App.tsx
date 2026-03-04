@@ -10,12 +10,13 @@ interface AnomLog {
   timestamp: string;
   site_type: string;
   was_ded_escalation: number;
-  was_capital_escalation: number;
-  was_shadow_escalation: number;
-  was_officer_escalation: number;
-  was_shadow_spawn: number;
-  was_dread_spawn: number;
-  was_shadow_dread_spawn: number;
+  was_occ_mine_escalation: number;
+  was_cap_stag_escalation: number;
+  was_shld_starb_escalation: number;
+  was_attack_site_escalation: number;
+  was_faction_npc_spawn: number;
+  was_capital_spawn: number;
+  was_faction_capital_spawn: number;
   was_titan_spawn: number;
 }
 
@@ -66,12 +67,13 @@ export default function App() {
   // Toggles
   const [toggles, setToggles] = useState({
     was_ded_escalation: false,
-    was_capital_escalation: false,
-    was_shadow_escalation: false,
-    was_officer_escalation: false,
-    was_shadow_spawn: false,
-    was_dread_spawn: false,
-    was_shadow_dread_spawn: false,
+    was_occ_mine_escalation: false,
+    was_cap_stag_escalation: false,
+    was_shld_starb_escalation: false,
+    was_attack_site_escalation: false,
+    was_faction_npc_spawn: false,
+    was_capital_spawn: false,
+    was_faction_capital_spawn: false,
     was_titan_spawn: false,
   });
 
@@ -187,13 +189,14 @@ export default function App() {
                 timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
                 site_type: bindValues![0],
                 was_ded_escalation: bindValues![1],
-                was_capital_escalation: bindValues![2],
-                was_shadow_escalation: bindValues![3],
-                was_officer_escalation: bindValues![4],
-                was_shadow_spawn: bindValues![5],
-                was_dread_spawn: bindValues![6],
-                was_shadow_dread_spawn: bindValues![7],
-                was_titan_spawn: bindValues![8],
+                was_occ_mine_escalation: bindValues![2],
+                was_cap_stag_escalation: bindValues![3],
+                was_shld_starb_escalation: bindValues![4],
+                was_attack_site_escalation: bindValues![5],
+                was_faction_npc_spawn: bindValues![6],
+                was_capital_spawn: bindValues![7],
+                was_faction_capital_spawn: bindValues![8],
+                was_titan_spawn: bindValues![9],
               };
               this.logs.push(log);
             } else if (query.includes('DELETE FROM anom_logs')) {
@@ -246,19 +249,20 @@ export default function App() {
     try {
       await db.execute(
         `INSERT INTO anom_logs (
-          site_type, was_ded_escalation, was_capital_escalation, was_shadow_escalation,
-          was_officer_escalation, was_shadow_spawn, was_dread_spawn,
-          was_shadow_dread_spawn, was_titan_spawn
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          site_type, was_ded_escalation, was_occ_mine_escalation, was_cap_stag_escalation,
+          was_shld_starb_escalation, was_attack_site_escalation, was_faction_npc_spawn,
+          was_capital_spawn, was_faction_capital_spawn, was_titan_spawn
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           siteType,
           toggles.was_ded_escalation ? 1 : 0,
-          toggles.was_capital_escalation ? 1 : 0,
-          toggles.was_shadow_escalation ? 1 : 0,
-          toggles.was_officer_escalation ? 1 : 0,
-          toggles.was_shadow_spawn ? 1 : 0,
-          toggles.was_dread_spawn ? 1 : 0,
-          toggles.was_shadow_dread_spawn ? 1 : 0,
+          toggles.was_occ_mine_escalation ? 1 : 0,
+          toggles.was_cap_stag_escalation ? 1 : 0,
+          toggles.was_shld_starb_escalation ? 1 : 0,
+          toggles.was_attack_site_escalation ? 1 : 0,
+          toggles.was_faction_npc_spawn ? 1 : 0,
+          toggles.was_capital_spawn ? 1 : 0,
+          toggles.was_faction_capital_spawn ? 1 : 0,
           toggles.was_titan_spawn ? 1 : 0,
         ]
       );
@@ -266,12 +270,13 @@ export default function App() {
       // Reset toggles
       setToggles({
         was_ded_escalation: false,
-        was_capital_escalation: false,
-        was_shadow_escalation: false,
-        was_officer_escalation: false,
-        was_shadow_spawn: false,
-        was_dread_spawn: false,
-        was_shadow_dread_spawn: false,
+        was_occ_mine_escalation: false,
+        was_cap_stag_escalation: false,
+        was_shld_starb_escalation: false,
+        was_attack_site_escalation: false,
+        was_faction_npc_spawn: false,
+        was_capital_spawn: false,
+        was_faction_capital_spawn: false,
         was_titan_spawn: false,
       });
 
@@ -308,12 +313,13 @@ export default function App() {
   const getActiveIcons = (log: AnomLog) => {
     const icons: { label: string; color: 'gold' | 'blue' | 'green' }[] = [];
     if (log.was_ded_escalation === 1) icons.push({ label: 'DED-ESC', color: 'green' });
-    if (log.was_capital_escalation === 1) icons.push({ label: 'CAP-ESC', color: 'green' });
-    if (log.was_shadow_escalation === 1) icons.push({ label: 'SHD-ESC', color: 'green' });
-    if (log.was_officer_escalation === 1) icons.push({ label: 'OFF-ESC', color: 'green' });
-    if (log.was_shadow_spawn === 1) icons.push({ label: 'SHD-NPC', color: 'blue' });
-    if (log.was_dread_spawn === 1) icons.push({ label: 'DRD', color: 'blue' });
-    if (log.was_shadow_dread_spawn === 1) icons.push({ label: 'SHA-DRD', color: 'blue' });
+    if (log.was_occ_mine_escalation === 1) icons.push({ label: 'OCC-MINE-ESC', color: 'green' });
+    if (log.was_cap_stag_escalation === 1) icons.push({ label: 'CAP-STG', color: 'green' });
+    if (log.was_shld_starb_escalation === 1) icons.push({ label: 'SHLD-STRB', color: 'green' });
+    if (log.was_attack_site_escalation === 1) icons.push({ label: 'ATTK-SITE', color: 'green' });
+    if (log.was_faction_npc_spawn === 1) icons.push({ label: 'FACT-NPC', color: 'blue' });
+    if (log.was_capital_spawn === 1) icons.push({ label: 'CAP', color: 'blue' });
+    if (log.was_faction_capital_spawn === 1) icons.push({ label: 'FACT-CAP', color: 'blue' });
     if (log.was_titan_spawn === 1) icons.push({ label: 'TTN', color: 'blue' });
     return icons;
   };
@@ -397,6 +403,7 @@ export default function App() {
             </div>
             <div className="grid grid-cols-2 gap-3 mb-8">
               <div className="space-y-3">
+                <div className="text-[10px] font-bold text-[#f0b419]/70 uppercase tracking-widest mb-1 border-b border-[#f0b419]/20 pb-1">Escalations</div>
                 <ToggleButton
                   label="DED ESC"
                   active={toggles.was_ded_escalation}
@@ -404,41 +411,48 @@ export default function App() {
                   color="green"
                 />
                 <ToggleButton
-                  label="CAP ESC"
-                  active={toggles.was_capital_escalation}
-                  onClick={() => toggleState('was_capital_escalation')}
+                  label="OCC MINE ESC"
+                  active={toggles.was_occ_mine_escalation}
+                  onClick={() => toggleState('was_occ_mine_escalation')}
                   color="green"
                 />
                 <ToggleButton
-                  label="SHADOW ESC"
-                  active={toggles.was_shadow_escalation}
-                  onClick={() => toggleState('was_shadow_escalation')}
+                  label="CAP STAG ESC"
+                  active={toggles.was_cap_stag_escalation}
+                  onClick={() => toggleState('was_cap_stag_escalation')}
+                  color="green"
+                />
+                <ToggleButton
+                  label="SHLD STARB ESC"
+                  active={toggles.was_shld_starb_escalation}
+                  onClick={() => toggleState('was_shld_starb_escalation')}
                   color="green"
                 />
                 <ToggleButton
                   label="OFFICER ESC"
-                  active={toggles.was_officer_escalation}
-                  onClick={() => toggleState('was_officer_escalation')}
+                  active={toggles.was_attack_site_escalation}
+                  onClick={() => toggleState('was_attack_site_escalation')}
                   color="green"
                 />
               </div>
               <div className="space-y-3">
+                <div className="text-[10px] font-bold text-[#f0b419]/70 uppercase tracking-widest mb-1 border-b border-[#f0b419]/20 pb-1">Special Spawns</div>
                 <ToggleButton
-                  label="SHADOW NPC"
-                  active={toggles.was_shadow_spawn}
-                  onClick={() => toggleState('was_shadow_spawn')}
+                  label="FACT NPC"
+                  active={toggles.was_faction_npc_spawn}
+                  onClick={() => toggleState('was_faction_npc_spawn')}
                   color="blue"
                 />
                 <ToggleButton
-                  label="DREAD"
-                  active={toggles.was_dread_spawn}
-                  onClick={() => toggleState('was_dread_spawn')}
+                  label="CAPITAL"
+                  active={toggles.was_capital_spawn}
+                  onClick={() => toggleState('was_capital_spawn')}
                   color="blue"
                 />
                 <ToggleButton
-                  label="SHADOW DREAD"
-                  active={toggles.was_shadow_dread_spawn}
-                  onClick={() => toggleState('was_shadow_dread_spawn')}
+                  label="FACT CAP"
+                  active={toggles.was_faction_capital_spawn}
+                  onClick={() => toggleState('was_faction_capital_spawn')}
                   color="blue"
                 />
                 <ToggleButton
