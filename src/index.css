@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+body {
+  background-color: transparent !important;
+}
+
 @theme {
   --animate-flicker: flicker 4s infinite;
   --animate-scanline: scanline 8s linear infinite;
