@@ -1,6 +1,6 @@
 {
   "productName": "AnomTracker",
-  "version": "0.1.0-alpha",
+  "version": "0.1.2",
   "identifier": "com.anomtracker.app",
   "build": {
     "beforeDevCommand": "npm run dev",

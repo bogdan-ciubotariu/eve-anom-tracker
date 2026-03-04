@@ -1,6 +1,6 @@
 [package]
 name = "anomtracker"
-version = "0.1.0-alpha"
+version = "0.1.2"
 description = "A lightweight desktop app for EVE Online Anomaly Tracking"
 authors = ["you"]
 edition = "2021"

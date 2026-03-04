@@ -46,3 +46,11 @@ jobs:
           releaseBody: 'See the assets below to download and install this version.'
           releaseDraft: false
           prerelease: false
+
+      - name: Upload Portable Executable (Windows)
+        if: matrix.platform == 'windows-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Rename-Item -Path "src-tauri/target/release/anomtracker.exe" -NewName "AnomTracker-Portable.exe"
+          gh release upload ${{ github.ref_name }} "src-tauri/target/release/AnomTracker-Portable.exe" --clobber
