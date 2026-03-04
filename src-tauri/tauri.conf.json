@@ -31,10 +31,7 @@
             "sql:default",
             "sql:allow-load",
             "sql:allow-execute",
-            "sql:allow-select",
-            "core:window:default",
-            "core:window:allow-set-size",
-            "core:window:allow-set-opacity"
+            "sql:allow-select"
           ]
         }
       ]

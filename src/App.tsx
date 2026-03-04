@@ -1,7 +1,5 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { LogicalSize } from '@tauri-apps/api/dpi';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
 import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon } from 'lucide-react';
@@ -122,11 +120,11 @@ export default function App() {
     try {
       const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       if (isTauri) {
-        await invoke('set_always_on_top', { alwaysOnTop: s.alwaysOnTop });
-        // Apply opacity and size via Tauri Window API
-        const win = getCurrentWindow();
-        await win.setOpacity(s.windowOpacity);
-        await win.setSize(new LogicalSize(360 * s.globalScale, 720 * s.globalScale));
+        await invoke('apply_window_settings', { 
+          alwaysOnTop: s.alwaysOnTop,
+          scale: s.globalScale,
+          opacity: s.windowOpacity
+        });
       }
     } catch (error) {
       console.error('Failed to apply settings:', error);

@@ -37,8 +37,10 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn set_always_on_top(window: tauri::Window, always_on_top: bool) {
+fn apply_window_settings(window: tauri::Window, always_on_top: bool, scale: f64, opacity: f64) {
     let _ = window.set_always_on_top(always_on_top);
+    let _ = window.set_size(tauri::LogicalSize::new(360.0 * scale, 720.0 * scale));
+    let _ = window.set_opacity(opacity as f32);
 }
 
 fn get_settings_file_path() -> PathBuf {
@@ -98,7 +100,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet, 
             get_db_path, 
-            set_always_on_top, 
+            apply_window_settings, 
             load_settings, 
             save_settings
         ])
