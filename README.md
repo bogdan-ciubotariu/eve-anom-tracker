@@ -1,20 +1,13 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# EVE AnomTracker
 
-# Run and deploy your AI Studio app
+A lightweight desktop app for EVE Online Anomaly Tracking.
 
-This contains everything you need to run your app locally.
+## How to Use (Portable)
 
-View your app in AI Studio: https://ai.studio/apps/6f7244a9-83ff-431d-894e-82b84656e0bd
+AnomTracker can be run as a standalone, portable application without needing to install it on your system.
 
-## Run Locally
+1. Download the standalone `.exe` file from the [Releases](../../releases) page.
+2. Move the `.exe` to any folder on your computer, or even a USB drive.
+3. Double-click to run it!
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+**Note on Data Storage:** Your tracking logs are safely stored in your user's `AppData` folder (e.g., `C:\Users\<YourUser>\AppData\Roaming\com.anomtracker.app`). This means you can move the `.exe` file around or download a new version without losing your history!
