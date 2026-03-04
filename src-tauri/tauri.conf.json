@@ -32,9 +32,9 @@
             "sql:allow-load",
             "sql:allow-execute",
             "sql:allow-select",
-            "window:default",
-            "window:allow-set-size",
-            "window:allow-set-opacity"
+            "core:window:default",
+            "core:window:allow-set-size",
+            "core:window:allow-set-opacity"
           ]
         }
       ]
