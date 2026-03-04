@@ -36,6 +36,38 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+fn set_always_on_top(window: tauri::Window, always_on_top: bool) {
+    let _ = window.set_always_on_top(always_on_top);
+}
+
+fn get_settings_file_path() -> PathBuf {
+    let mut path = env::current_exe().expect("Failed to get current exe path");
+    path.pop(); // Remove the .exe name
+    path.push("data"); 
+    if !path.exists() {
+        fs::create_dir_all(&path).expect("Failed to create data directory");
+    }
+    path.push("settings.json");
+    path
+}
+
+#[tauri::command]
+fn load_settings() -> String {
+    let path = get_settings_file_path();
+    if path.exists() {
+        fs::read_to_string(path).unwrap_or_else(|_| "{}".to_string())
+    } else {
+        "{}".to_string()
+    }
+}
+
+#[tauri::command]
+fn save_settings(settings: String) -> Result<(), String> {
+    let path = get_settings_file_path();
+    fs::write(path, settings).map_err(|e| e.to_string())
+}
+
 fn get_db_file_path() -> PathBuf {
     let mut path = env::current_exe().expect("Failed to get current exe path");
     path.pop(); // Remove the .exe name
@@ -63,7 +95,13 @@ pub fn run() {
                 .add_migrations(&db_url, get_migrations())
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet, get_db_path])
+        .invoke_handler(tauri::generate_handler![
+            greet, 
+            get_db_path, 
+            set_always_on_top, 
+            load_settings, 
+            save_settings
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
