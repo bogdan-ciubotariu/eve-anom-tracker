@@ -31,7 +31,10 @@
             "sql:default",
             "sql:allow-load",
             "sql:allow-execute",
-            "sql:allow-select"
+            "sql:allow-select",
+            "window:default",
+            "window:allow-set-size",
+            "window:allow-set-opacity"
           ]
         }
       ]

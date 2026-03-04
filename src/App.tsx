@@ -1,6 +1,7 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
 import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon } from 'lucide-react';
@@ -32,7 +33,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   globalScale: 1.0,
   windowOpacity: 1.0,
   customSites: "Haven, Sanctum, Forsaken Hub, Forsaken Rally Point",
-  enableSounds: false,
+  enableSounds: true,
 };
 
 type ViewState = 'combat' | 'statistics' | 'settings';
@@ -122,9 +123,10 @@ export default function App() {
       const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       if (isTauri) {
         await invoke('set_always_on_top', { alwaysOnTop: s.alwaysOnTop });
-        // Apply opacity via Tauri Window API
+        // Apply opacity and size via Tauri Window API
         const win = getCurrentWindow();
         await win.setOpacity(s.windowOpacity);
+        await win.setSize(new LogicalSize(360 * s.globalScale, 720 * s.globalScale));
       }
     } catch (error) {
       console.error('Failed to apply settings:', error);
@@ -321,8 +323,8 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#0a0a0a] text-gray-300 font-sans flex flex-col w-[360px] mx-auto overflow-hidden select-none origin-top"
-      style={{ transform: `scale(${settings.globalScale})`, height: `${100 / settings.globalScale}vh` }}
+      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col w-[360px] h-[720px] overflow-hidden select-none origin-top-left"
+      style={{ transform: `scale(${settings.globalScale})` }}
     >
       <header className="p-4 mb-2 border-b border-[#f0b419]/30 pb-2 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
         <h1 className="text-xl font-bold text-[#f0b419] tracking-wider uppercase">
