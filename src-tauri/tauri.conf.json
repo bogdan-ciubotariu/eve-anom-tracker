@@ -1,5 +1,5 @@
 {
-  "productName": "EVE AnomTracker",
+  "productName": "AnomTracker",
   "version": "0.1.0-alpha",
   "identifier": "com.anomtracker.app",
   "build": {

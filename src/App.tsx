@@ -1,4 +1,5 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
@@ -72,23 +73,8 @@ export default function App() {
       let database: any;
 
       if (isTauri) {
-        const dbName = import.meta.env.DEV ? 'sqlite:anomtracker_dev.db' : 'sqlite:anomtracker.db';
-        database = await Database.load(dbName);
-        await database.execute(`
-          CREATE TABLE IF NOT EXISTS anom_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            site_type TEXT,
-            was_ded_escalation INTEGER DEFAULT 0 CHECK (was_ded_escalation IN (0, 1)),
-            was_capital_escalation INTEGER DEFAULT 0 CHECK (was_capital_escalation IN (0, 1)),
-            was_shadow_escalation INTEGER DEFAULT 0 CHECK (was_shadow_escalation IN (0, 1)),
-            was_officer_escalation INTEGER DEFAULT 0 CHECK (was_officer_escalation IN (0, 1)),
-            was_shadow_spawn INTEGER DEFAULT 0 CHECK (was_shadow_spawn IN (0, 1)),
-            was_dread_spawn INTEGER DEFAULT 0 CHECK (was_dread_spawn IN (0, 1)),
-            was_shadow_dread_spawn INTEGER DEFAULT 0 CHECK (was_shadow_dread_spawn IN (0, 1)),
-            was_titan_spawn INTEGER DEFAULT 0 CHECK (was_titan_spawn IN (0, 1))
-          )
-        `);
+        const dbPath = await invoke<string>('get_db_path');
+        database = await Database.load(dbPath);
       } else {
         console.warn('Not running in Tauri environment. Using mock database.');
         setDbError('Web Preview Mode: Data will not persist across reloads.');
