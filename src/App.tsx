@@ -326,7 +326,7 @@ export default function App() {
 
   return (
     <div 
-      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col w-[360px] h-[720px] overflow-hidden select-none origin-top-left"
+      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col w-[360px] h-[820px] overflow-hidden select-none origin-top-left"
       style={{ transform: `scale(${settings.globalScale})`, opacity: settings.windowOpacity }}
     >
       <header className="p-4 mb-2 border-b border-[#f0b419]/30 pb-2 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
