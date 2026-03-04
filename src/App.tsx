@@ -376,7 +376,7 @@ export default function App() {
           <>
             <div className="mb-6">
               <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                Site Type
+                Site Info
               </label>
               <select
                 value={siteType}
@@ -391,6 +391,11 @@ export default function App() {
               </select>
             </div>
 
+            <div className="mb-2">
+              <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                Site Outcome
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-3 mb-8">
               <div className="space-y-3">
                 <ToggleButton
