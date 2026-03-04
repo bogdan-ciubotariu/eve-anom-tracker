@@ -517,15 +517,46 @@ export default function App() {
         )}
 
         {currentView === 'statistics' && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 border-4 border-[#f0b419]/20 border-t-[#f0b419] rounded-full animate-spin mx-auto"></div>
-              <h2 className="text-xl font-bold text-[#f0b419] uppercase tracking-widest">
-                Coming Soon
-              </h2>
-              <p className="text-sm text-gray-500 uppercase tracking-wider">
-                Advanced analytics in development
-              </p>
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-[#0a0a0a]">
+            {/* Scanline overlay */}
+            <div className="absolute inset-0 bg-scanlines z-10 pointer-events-none opacity-50"></div>
+            
+            {/* Moving scan line */}
+            <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
+              <div className="w-full h-8 bg-gradient-to-b from-transparent via-[#00e5ff]/10 to-transparent animate-scanline"></div>
+            </div>
+
+            {/* Hologram Container */}
+            <div className="relative z-30 text-center animate-flicker">
+              {/* Abstract Tactical Graphics */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-[#00e5ff]/20 rounded-full animate-[spin_20s_linear_infinite]"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-[#00e5ff]/30 rounded-full border-dashed animate-[spin_15s_linear_infinite_reverse]"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 border-t border-b border-[#00e5ff]/10 rounded-full animate-[spin_30s_linear_infinite]"></div>
+              
+              {/* Crosshairs */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-[1px] bg-[#00e5ff]/20"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-80 bg-[#00e5ff]/20"></div>
+
+              {/* Text Content */}
+              <div className="relative bg-[#0a0a0a]/80 backdrop-blur-sm p-6 border border-[#00e5ff]/30 shadow-[0_0_30px_rgba(0,229,255,0.2)]">
+                <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-[#00e5ff]"></div>
+                <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-[#00e5ff]"></div>
+                <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-[#00e5ff]"></div>
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-[#00e5ff]"></div>
+                
+                <h2 className="text-2xl font-bold text-[#00e5ff] uppercase tracking-[0.2em] mb-2 drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]">
+                  Advanced<br/>Statistics
+                </h2>
+                <p className="text-xs text-[#00e5ff]/70 uppercase tracking-widest animate-pulse">
+                  Coming Soon...
+                </p>
+                
+                {/* Data streams */}
+                <div className="mt-4 flex justify-between text-[8px] text-[#00e5ff]/40 font-mono">
+                  <span>SYS.CHK... OK</span>
+                  <span>UPLINK... ESTABLISHED</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
