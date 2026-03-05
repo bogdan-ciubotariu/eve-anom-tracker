@@ -45,18 +45,26 @@ const Titlebar = () => {
   const appWindow = isTauri ? getCurrentWindow() : null;
 
   const handleMouseDown = (e: MouseEvent) => {
+    // Only start dragging on left click and if we're not clicking a button
     if (isTauri && e.button === 0) {
+      // Use the explicit startDragging API for better reliability
       appWindow?.startDragging();
     }
   };
 
   return (
     <div 
-      data-tauri-drag-region 
-      onMouseDown={handleMouseDown}
-      className="h-[28px] bg-[#050505] flex justify-end items-center border-b border-[#333] select-none shrink-0 cursor-default"
+      className="h-[28px] bg-[#050505] flex items-center border-b border-[#333] select-none shrink-0 overflow-hidden"
     >
-      <div className="flex h-full">
+      {/* Dedicated Drag Area */}
+      <div 
+        data-tauri-drag-region
+        onMouseDown={handleMouseDown}
+        className="flex-1 h-full cursor-default"
+      />
+
+      {/* Window Controls */}
+      <div className="flex h-full shrink-0">
         <button 
           onClick={() => isTauri && appWindow?.minimize()}
           className="h-full px-3 flex items-center justify-center hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-colors text-gray-500"
