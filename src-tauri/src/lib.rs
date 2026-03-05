@@ -38,9 +38,9 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn apply_window_settings(window: tauri::Window, always_on_top: bool, scale: f64) {
+fn apply_window_settings(window: tauri::Window, always_on_top: bool, scale: f64, width: f64, height: f64) {
     let _ = window.set_always_on_top(always_on_top);
-    let _ = window.set_size(tauri::LogicalSize::new(360.0 * scale, 820.0 * scale));
+    let _ = window.set_size(tauri::LogicalSize::new(width * scale, height * scale));
 }
 
 fn get_settings_file_path() -> PathBuf {

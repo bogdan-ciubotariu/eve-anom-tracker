@@ -6,6 +6,7 @@ export interface AppSettings {
   windowOpacity: number;
   customSites: string;
   enableSounds: boolean;
+  orientation: 'portrait' | 'landscape';
 }
 
 interface SettingsProps {
@@ -25,6 +26,26 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
       </h2>
 
       <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-300 uppercase tracking-wider">
+            Orientation
+          </label>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleChange('orientation', 'portrait')}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded transition-colors ${settings.orientation === 'portrait' ? 'bg-[#f0b419] text-[#0a0a0a]' : 'bg-[#141414] text-gray-400 border border-gray-800 hover:text-[#f0b419]'}`}
+            >
+              Portrait
+            </button>
+            <button
+              onClick={() => handleChange('orientation', 'landscape')}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded transition-colors ${settings.orientation === 'landscape' ? 'bg-[#f0b419] text-[#0a0a0a]' : 'bg-[#141414] text-gray-400 border border-gray-800 hover:text-[#f0b419]'}`}
+            >
+              Landscape
+            </button>
+          </div>
+        </div>
+
         <label className="flex items-center justify-between cursor-pointer group">
           <span className="text-xs font-medium text-gray-300 uppercase tracking-wider group-hover:text-[#f0b419] transition-colors">
             Always on Top

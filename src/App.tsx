@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   windowOpacity: 1.0,
   customSites: "Haven, Sanctum, Forsaken Hub, Forsaken Rally Point",
   enableSounds: true,
+  orientation: 'portrait',
 };
 
 type ViewState = 'combat' | 'statistics' | 'settings';
@@ -122,9 +123,13 @@ export default function App() {
     try {
       const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       if (isTauri) {
+        const width = s.orientation === 'portrait' ? 360 : 820;
+        const height = s.orientation === 'portrait' ? 780 : 420;
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
-          scale: s.globalScale
+          scale: s.globalScale,
+          width,
+          height
         });
       }
     } catch (error) {
@@ -324,10 +329,19 @@ export default function App() {
     return icons;
   };
 
+  const isLandscape = settings.orientation === 'landscape';
+  const appWidth = isLandscape ? 820 : 360;
+  const appHeight = isLandscape ? 420 : 780;
+
   return (
     <div 
-      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col w-[360px] h-[820px] overflow-hidden select-none origin-top-left"
-      style={{ transform: `scale(${settings.globalScale})`, opacity: settings.windowOpacity }}
+      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left"
+      style={{ 
+        width: `${appWidth}px`, 
+        height: `${appHeight}px`,
+        transform: `scale(${settings.globalScale})`, 
+        opacity: settings.windowOpacity 
+      }}
     >
       <header className="p-4 mb-2 border-b border-[#f0b419]/30 pb-2 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
         <h1 className="text-xl font-bold text-[#f0b419] tracking-wider uppercase">
@@ -378,105 +392,133 @@ export default function App() {
         )}
 
         {currentView === 'combat' && (
-          <>
-            <div className="mb-6">
-              <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                Site Info
-              </label>
-              <select
-                value={siteType}
-                onChange={handleSiteTypeChange}
-                className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-              >
-                {siteTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className={`flex-1 flex ${isLandscape ? 'flex-row space-x-6' : 'flex-col'} overflow-hidden`}>
+            <div className={isLandscape ? 'w-1/2 flex flex-col' : ''}>
+              {!isLandscape && (
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                    Site Info
+                  </label>
+                  <select
+                    value={siteType}
+                    onChange={handleSiteTypeChange}
+                    className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                  >
+                    {siteTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-            <div className="mb-2">
-              <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                Site Outcome
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              <div className="space-y-3">
-                <div className="text-[10px] font-bold text-[#f0b419]/70 uppercase tracking-widest mb-1 border-b border-[#f0b419]/20 pb-1">Escalations</div>
-                <ToggleButton
-                  label="DED ESC"
-                  active={toggles.was_ded_escalation}
-                  onClick={() => toggleState('was_ded_escalation')}
-                  color="green"
-                />
-                <ToggleButton
-                  label="OCC MINE ESC"
-                  active={toggles.was_occ_mine_escalation}
-                  onClick={() => toggleState('was_occ_mine_escalation')}
-                  color="green"
-                />
-                <ToggleButton
-                  label="CAP STAG ESC"
-                  active={toggles.was_cap_stag_escalation}
-                  onClick={() => toggleState('was_cap_stag_escalation')}
-                  color="green"
-                />
-                <ToggleButton
-                  label="SHLD STARB ESC"
-                  active={toggles.was_shld_starb_escalation}
-                  onClick={() => toggleState('was_shld_starb_escalation')}
-                  color="green"
-                />
-                <ToggleButton
-                  label="OFFICER ESC"
-                  active={toggles.was_attack_site_escalation}
-                  onClick={() => toggleState('was_attack_site_escalation')}
-                  color="green"
-                />
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="space-y-3">
+                  <div className="text-[10px] font-bold text-[#00ff7f]/70 uppercase tracking-widest mb-1 border-b border-[#00ff7f]/20 pb-1">Escalations</div>
+                  <ToggleButton
+                    label="DED Site"
+                    active={toggles.was_ded_escalation}
+                    onClick={() => toggleState('was_ded_escalation')}
+                    color="green"
+                  />
+                  <ToggleButton
+                    label="Occupied Mine"
+                    active={toggles.was_occ_mine_escalation}
+                    onClick={() => toggleState('was_occ_mine_escalation')}
+                    color="green"
+                  />
+                  <ToggleButton
+                    label="Capital Staging"
+                    active={toggles.was_cap_stag_escalation}
+                    onClick={() => toggleState('was_cap_stag_escalation')}
+                    color="green"
+                  />
+                  <ToggleButton
+                    label="Shielded Starbase"
+                    active={toggles.was_shld_starb_escalation}
+                    onClick={() => toggleState('was_shld_starb_escalation')}
+                    color="green"
+                  />
+                  <ToggleButton
+                    label="Attack Site"
+                    active={toggles.was_attack_site_escalation}
+                    onClick={() => toggleState('was_attack_site_escalation')}
+                    color="green"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="text-[10px] font-bold text-[#00e5ff]/70 uppercase tracking-widest mb-1 border-b border-[#00e5ff]/20 pb-1">Special Spawns</div>
+                  <ToggleButton
+                    label="Faction Subcapital"
+                    active={toggles.was_faction_npc_spawn}
+                    onClick={() => toggleState('was_faction_npc_spawn')}
+                    color="blue"
+                  />
+                  <ToggleButton
+                    label="Capital"
+                    active={toggles.was_capital_spawn}
+                    onClick={() => toggleState('was_capital_spawn')}
+                    color="blue"
+                  />
+                  <ToggleButton
+                    label="Faction Capital"
+                    active={toggles.was_faction_capital_spawn}
+                    onClick={() => toggleState('was_faction_capital_spawn')}
+                    color="blue"
+                  />
+                  <ToggleButton
+                    label="Titan"
+                    active={toggles.was_titan_spawn}
+                    onClick={() => toggleState('was_titan_spawn')}
+                    color="blue"
+                  />
+                </div>
               </div>
-              <div className="space-y-3">
-                <div className="text-[10px] font-bold text-[#f0b419]/70 uppercase tracking-widest mb-1 border-b border-[#f0b419]/20 pb-1">Special Spawns</div>
-                <ToggleButton
-                  label="FACT NPC"
-                  active={toggles.was_faction_npc_spawn}
-                  onClick={() => toggleState('was_faction_npc_spawn')}
-                  color="blue"
-                />
-                <ToggleButton
-                  label="CAPITAL"
-                  active={toggles.was_capital_spawn}
-                  onClick={() => toggleState('was_capital_spawn')}
-                  color="blue"
-                />
-                <ToggleButton
-                  label="FACT CAP"
-                  active={toggles.was_faction_capital_spawn}
-                  onClick={() => toggleState('was_faction_capital_spawn')}
-                  color="blue"
-                />
-                <ToggleButton
-                  label="TITAN"
-                  active={toggles.was_titan_spawn}
-                  onClick={() => toggleState('was_titan_spawn')}
-                  color="blue"
-                />
-              </div>
+
+              {!isLandscape && (
+                <button
+                  onClick={logSite}
+                  disabled={!db}
+                  className="w-full py-3 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                >
+                  Log Site
+                </button>
+              )}
             </div>
 
-            <button
-              onClick={logSite}
-              disabled={!db}
-              className="w-full py-4 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-8"
-            >
-              Log Site
-            </button>
-
-            <div className="flex-1 overflow-y-auto">
+            <div className={`flex-1 flex flex-col overflow-hidden ${isLandscape ? 'border-l border-gray-800 pl-4' : ''}`}>
+              {isLandscape && (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                      Site Info
+                    </label>
+                    <select
+                      value={siteType}
+                      onChange={handleSiteTypeChange}
+                      className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                    >
+                      {siteTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={logSite}
+                    disabled={!db}
+                    className="w-full py-3 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                  >
+                    Log Site
+                  </button>
+                </>
+              )}
               <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-3 border-b border-[#f0b419]/30 pb-1">
                 Recent History
               </h2>
-              <div className="space-y-2">
+              <div className="flex-1 overflow-y-auto space-y-2">
                 {history.length === 0 ? (
                   <p className="text-xs text-gray-500 italic text-center py-4">
                     No sites logged yet.
@@ -515,8 +557,8 @@ export default function App() {
                         </div>
                         <button
                           onClick={() => requestDelete(log.id)}
-                          className="text-gray-600 hover:text-red-500 transition-colors opacity-50 group-hover:opacity-100 p-1"
-                          title="Delete Log"
+                          className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                          title="Delete log"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -526,7 +568,7 @@ export default function App() {
                 )}
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {currentView === 'statistics' && (
