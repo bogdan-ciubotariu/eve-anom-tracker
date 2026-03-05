@@ -165,7 +165,7 @@ export default function App() {
     try {
       if (isTauri) {
         const width = s.orientation === 'portrait' ? 360 : 650;
-        const height = s.orientation === 'portrait' ? 700 : 360;
+        const height = s.orientation === 'portrait' ? 725 : 410;
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
           scale: s.globalScale,
@@ -371,11 +371,11 @@ export default function App() {
 
   const isLandscape = settings.orientation === 'landscape';
   const appWidth = isLandscape ? 650 : 360;
-  const appHeight = isLandscape ? 360 : 700;
+  const appHeight = isLandscape ? 410 : 725;
 
   return (
     <div 
-      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left"
+      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left outline-none"
       style={{ 
         width: `${appWidth}px`, 
         height: `${appHeight}px`,
