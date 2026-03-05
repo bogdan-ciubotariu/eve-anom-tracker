@@ -14,7 +14,7 @@
         "label": "main",
         "title": "EVE AnomTracker",
         "width": 360,
-        "height": 820,
+        "height": 725,
         "resizable": false,
         "fullscreen": false,
         "transparent": true,
