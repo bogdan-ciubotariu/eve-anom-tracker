@@ -399,12 +399,15 @@ export default function App() {
 
   return (
     <div 
-      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left outline-none border-none shadow-none relative"
+      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left outline-none relative"
       style={{ 
         width: `${appWidth}px`, 
         height: `${appHeight}px`,
         transform: `scale(${settings.globalScale})`, 
-        opacity: settings.windowOpacity 
+        opacity: settings.windowOpacity,
+        border: '1px solid #0a0a0a',
+        boxSizing: 'border-box',
+        boxShadow: 'none'
       }}
     >
       <Titlebar />
