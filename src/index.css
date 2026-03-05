@@ -23,10 +23,27 @@ html {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
   outline: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
-*:focus {
+*:focus, *:active, *:focus-visible {
   outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically target the root and body to prevent any OS-level focus borders if possible via CSS */
+html, body, #root {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+::selection {
+  background: transparent;
+}
+
+::-moz-selection {
+  background: transparent;
 }
 
 @theme {
