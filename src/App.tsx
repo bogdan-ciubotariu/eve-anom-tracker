@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
-import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus } from 'lucide-react';
+import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import Settings, { AppSettings } from './Settings';
 
 interface AnomLog {
@@ -41,7 +41,7 @@ type ViewState = 'combat' | 'statistics' | 'settings';
 
 const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window);
 
-const Titlebar = () => {
+const Titlebar = ({ isCollapsed, onToggleCollapse }: { isCollapsed: boolean, onToggleCollapse: () => void }) => {
   const appWindow = isTauri ? getCurrentWindow() : null;
 
   const handleMouseDown = (e: MouseEvent) => {
@@ -70,6 +70,13 @@ const Titlebar = () => {
       {/* Window Controls */}
       <div className="flex h-full shrink-0">
         <button 
+          onClick={onToggleCollapse}
+          className="h-full px-3 flex items-center justify-center hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-colors text-gray-500"
+          title={isCollapsed ? "Expand" : "Collapse"}
+        >
+          {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+        </button>
+        <button 
           onClick={() => isTauri && appWindow?.minimize()}
           className="h-full px-3 flex items-center justify-center hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-colors text-gray-500"
         >
@@ -90,6 +97,7 @@ export default function App() {
   const [db, setDb] = useState<Database | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [currentView, setCurrentView] = useState<ViewState>('combat');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   const siteTypes = settings.customSites
     ? settings.customSites.split(',').map(s => s.trim()).filter(Boolean)
@@ -171,7 +179,7 @@ export default function App() {
     try {
       if (isTauri) {
         const width = s.orientation === 'portrait' ? 360 : 650;
-        const height = s.orientation === 'portrait' ? 725 : 450;
+        const height = isCollapsed ? 28 : (s.orientation === 'portrait' ? 725 : 450);
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
           scale: s.globalScale,
@@ -183,6 +191,10 @@ export default function App() {
       console.error('Failed to apply settings:', error);
     }
   };
+
+  useEffect(() => {
+    applySettings(settings);
+  }, [isCollapsed]);
 
   const playTone = (type: 'log' | 'delete') => {
     if (!settings.enableSounds) return;
@@ -257,12 +269,16 @@ export default function App() {
             return { lastInsertId: this.idCounter, rowsAffected: 1 };
           },
           async select<T>(query: string, bindValues?: any[]): Promise<T> {
+            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
+            const filtered = this.logs.filter((l: AnomLog) => l.timestamp >= twelveHoursAgo);
+
             if (query.includes('ORDER BY id DESC LIMIT 3')) {
+              if (query.includes("datetime('now', '-12 hours')")) {
+                return [...filtered].reverse().slice(0, 3) as unknown as T;
+              }
               return [...this.logs].reverse().slice(0, 3) as unknown as T;
             }
             if (query.includes("datetime('now', '-12 hours')")) {
-              const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
-              const filtered = this.logs.filter((l: AnomLog) => l.timestamp >= twelveHoursAgo);
               if (query.includes('COUNT(*)')) {
                 return [{ count: filtered.length }] as unknown as T;
               }
@@ -284,7 +300,7 @@ export default function App() {
   const fetchHistory = async (database: any) => {
     try {
       const result = await database.select(
-        'SELECT * FROM anom_logs ORDER BY id DESC LIMIT 3'
+        "SELECT * FROM anom_logs WHERE timestamp >= datetime('now', '-12 hours') ORDER BY id DESC LIMIT 3"
       );
       setHistory(result as AnomLog[]);
 
@@ -395,7 +411,7 @@ export default function App() {
 
   const isLandscape = settings.orientation === 'landscape';
   const appWidth = isLandscape ? 650 : 360;
-  const appHeight = isLandscape ? 450 : 725;
+  const appHeight = isCollapsed ? 28 : (isLandscape ? 450 : 725);
 
   return (
     <div 
@@ -410,7 +426,7 @@ export default function App() {
         boxShadow: 'none'
       }}
     >
-      <Titlebar />
+      <Titlebar isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
       <header className="px-4 py-2 border-b border-[#f0b419]/10 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
         <div className="flex space-x-6">
           <button 
