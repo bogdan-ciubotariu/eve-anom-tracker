@@ -7,10 +7,17 @@ body {
   padding: 0;
   width: 100vw;
   height: 100vh;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 html {
   overflow: hidden;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -23,6 +30,7 @@ html {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
   outline: none !important;
+  box-shadow: none !important;
   -webkit-tap-highlight-color: transparent;
 }
 
