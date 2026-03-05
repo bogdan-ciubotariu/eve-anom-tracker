@@ -31,8 +31,8 @@
           "permissions": [
             "core:default",
             "window-state:default",
-            "window:allow-minimize",
-            "window:allow-close",
+            "core:window:allow-minimize",
+            "core:window:allow-close",
             "sql:default",
             "sql:allow-load",
             "sql:allow-execute",
