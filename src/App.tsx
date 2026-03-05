@@ -56,12 +56,16 @@ const Titlebar = () => {
     <div 
       className="h-[28px] bg-[#050505] flex items-center border-b border-[#333] select-none shrink-0 overflow-hidden"
     >
-      {/* Dedicated Drag Area */}
+      {/* Dedicated Drag Area with Title */}
       <div 
         data-tauri-drag-region
         onMouseDown={handleMouseDown}
-        className="flex-1 h-full cursor-default"
-      />
+        className="flex-1 h-full cursor-default flex items-center px-3"
+      >
+        <span className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase pointer-events-none">
+          EVE ANOMTRACKER
+        </span>
+      </div>
 
       {/* Window Controls */}
       <div className="flex h-full shrink-0">
@@ -86,7 +90,6 @@ export default function App() {
   const [db, setDb] = useState<Database | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [currentView, setCurrentView] = useState<ViewState>('combat');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const siteTypes = settings.customSites
     ? settings.customSites.split(',').map(s => s.trim()).filter(Boolean)
@@ -94,6 +97,9 @@ export default function App() {
 
   const [siteType, setSiteType] = useState(siteTypes[0] || 'Other');
   const [history, setHistory] = useState<AnomLog[]>([]);
+  const [fullHistory, setFullHistory] = useState<AnomLog[]>([]);
+  const [recentCount, setRecentCount] = useState<number>(0);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -254,6 +260,14 @@ export default function App() {
             if (query.includes('ORDER BY id DESC LIMIT 3')) {
               return [...this.logs].reverse().slice(0, 3) as unknown as T;
             }
+            if (query.includes("datetime('now', '-12 hours')")) {
+              const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
+              const filtered = this.logs.filter((l: AnomLog) => l.timestamp >= twelveHoursAgo);
+              if (query.includes('COUNT(*)')) {
+                return [{ count: filtered.length }] as unknown as T;
+              }
+              return [...filtered].reverse() as unknown as T;
+            }
             return [] as unknown as T;
           }
         };
@@ -273,6 +287,16 @@ export default function App() {
         'SELECT * FROM anom_logs ORDER BY id DESC LIMIT 3'
       );
       setHistory(result as AnomLog[]);
+
+      const countResult = await database.select(
+        "SELECT COUNT(*) as count FROM anom_logs WHERE timestamp >= datetime('now', '-12 hours')"
+      );
+      setRecentCount((countResult as any[])[0]?.count || 0);
+
+      const fullResult = await database.select(
+        "SELECT * FROM anom_logs WHERE timestamp >= datetime('now', '-12 hours') ORDER BY id DESC"
+      );
+      setFullHistory(fullResult as AnomLog[]);
     } catch (error) {
       console.error('Failed to fetch history:', error);
     }
@@ -357,15 +381,15 @@ export default function App() {
 
   const getActiveIcons = (log: AnomLog) => {
     const icons: { label: string; color: 'gold' | 'blue' | 'green' }[] = [];
-    if (log.was_ded_escalation === 1) icons.push({ label: 'DED-ESC', color: 'green' });
-    if (log.was_occ_mine_escalation === 1) icons.push({ label: 'OCC-MINE-ESC', color: 'green' });
+    if (log.was_ded_escalation === 1) icons.push({ label: 'DED-SITE', color: 'green' });
+    if (log.was_occ_mine_escalation === 1) icons.push({ label: 'OCC-MINE', color: 'green' });
     if (log.was_cap_stag_escalation === 1) icons.push({ label: 'CAP-STG', color: 'green' });
     if (log.was_shld_starb_escalation === 1) icons.push({ label: 'SHLD-STRB', color: 'green' });
     if (log.was_attack_site_escalation === 1) icons.push({ label: 'ATTK-SITE', color: 'green' });
-    if (log.was_faction_npc_spawn === 1) icons.push({ label: 'FACT-NPC', color: 'blue' });
+    if (log.was_faction_npc_spawn === 1) icons.push({ label: 'FAC-SUB', color: 'blue' });
     if (log.was_capital_spawn === 1) icons.push({ label: 'CAP', color: 'blue' });
-    if (log.was_faction_capital_spawn === 1) icons.push({ label: 'FACT-CAP', color: 'blue' });
-    if (log.was_titan_spawn === 1) icons.push({ label: 'TTN', color: 'blue' });
+    if (log.was_faction_capital_spawn === 1) icons.push({ label: 'FAC-CAP', color: 'blue' });
+    if (log.was_titan_spawn === 1) icons.push({ label: 'TITAN', color: 'blue' });
     return icons;
   };
 
@@ -375,7 +399,7 @@ export default function App() {
 
   return (
     <div 
-      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left outline-none border-none shadow-none"
+      className="bg-[#0a0a0a] text-gray-300 font-sans flex flex-col overflow-hidden select-none origin-top-left outline-none border-none shadow-none relative"
       style={{ 
         width: `${appWidth}px`, 
         height: `${appHeight}px`,
@@ -384,46 +408,29 @@ export default function App() {
       }}
     >
       <Titlebar />
-      <header className="p-4 mb-2 border-b border-[#f0b419]/30 pb-2 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
-        <h1 className="text-xl font-bold text-[#f0b419] tracking-wider uppercase">
-          EVE AnomTracker
-        </h1>
+      <header className="px-4 py-2 border-b border-[#f0b419]/10 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
+        <div className="flex space-x-6">
+          <button 
+            onClick={() => setCurrentView('combat')}
+            className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${currentView === 'combat' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            Combat Log
+          </button>
+          <button 
+            onClick={() => setCurrentView('statistics')}
+            className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${currentView === 'statistics' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            Statistics
+          </button>
+        </div>
         <button 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="text-[#f0b419] hover:text-white transition-colors p-1"
+          onClick={() => setCurrentView('settings')}
+          className={`transition-colors p-1 ${currentView === 'settings' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-[#f0b419]'}`}
+          title="Settings"
         >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          <SettingsIcon size={18} />
         </button>
       </header>
-
-      {/* Navigation Menu Overlay */}
-      {isMenuOpen && (
-        <div className="absolute inset-0 top-[60px] bg-[#0a0a0a]/95 backdrop-blur-sm z-50 flex flex-col p-4">
-          <div className="flex flex-col space-y-4 mt-4">
-            <button 
-              onClick={() => { setCurrentView('combat'); setIsMenuOpen(false); }}
-              className={`flex items-center p-4 rounded-lg font-bold uppercase tracking-wider transition-all duration-200 ${currentView === 'combat' ? 'text-[#0a0a0a] bg-[#f0b419] shadow-[0_0_15px_rgba(240,180,25,0.4)]' : 'text-gray-400 hover:text-[#f0b419] hover:bg-[#141414] border border-gray-800'}`}
-            >
-              <Crosshair className="mr-4" size={24} />
-              Combat Log
-            </button>
-            <button 
-              onClick={() => { setCurrentView('statistics'); setIsMenuOpen(false); }}
-              className={`flex items-center p-4 rounded-lg font-bold uppercase tracking-wider transition-all duration-200 ${currentView === 'statistics' ? 'text-[#0a0a0a] bg-[#f0b419] shadow-[0_0_15px_rgba(240,180,25,0.4)]' : 'text-gray-400 hover:text-[#f0b419] hover:bg-[#141414] border border-gray-800'}`}
-            >
-              <BarChart2 className="mr-4" size={24} />
-              Statistics
-            </button>
-            <button 
-              onClick={() => { setCurrentView('settings'); setIsMenuOpen(false); }}
-              className={`flex items-center p-4 rounded-lg font-bold uppercase tracking-wider transition-all duration-200 ${currentView === 'settings' ? 'text-[#0a0a0a] bg-[#f0b419] shadow-[0_0_15px_rgba(240,180,25,0.4)]' : 'text-gray-400 hover:text-[#f0b419] hover:bg-[#141414] border border-gray-800'}`}
-            >
-              <SettingsIcon className="mr-4" size={24} />
-              Settings
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="flex-1 flex flex-col p-4 overflow-hidden relative">
         {dbError && (
@@ -556,9 +563,18 @@ export default function App() {
                   </button>
                 </>
               )}
-              <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-3 border-b border-[#f0b419]/30 pb-1">
-                Recent History
-              </h2>
+              <div className="flex items-center justify-between mb-3 border-b border-[#f0b419]/30 pb-1">
+                <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider flex items-center">
+                  Recent History
+                  <span className="text-gray-500 ml-2 font-normal">| {recentCount} SITES</span>
+                </h2>
+                <button
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  className="text-xs text-gray-400 hover:text-[#f0b419] transition-colors"
+                >
+                  View
+                </button>
+              </div>
               <div className="flex-1 overflow-y-auto space-y-2">
                 {history.length === 0 ? (
                   <p className="text-xs text-gray-500 italic text-center py-4">
@@ -570,7 +586,7 @@ export default function App() {
                     const dateObj = new Date(log.timestamp + 'Z'); // Append Z to force UTC parsing if SQLite returns UTC
                     const timeStr = isNaN(dateObj.getTime())
                       ? log.timestamp.split(' ')[1] || log.timestamp
-                      : format(dateObj, 'HH:mm');
+                      : format(dateObj, 'HH:mm:ss');
                     
                     const icons = getActiveIcons(log);
 
@@ -661,6 +677,71 @@ export default function App() {
           <Settings settings={settings} onSettingsChange={saveSettings} />
         )}
       </div>
+
+      {/* Full History Modal */}
+      {isHistoryModalOpen && (
+        <div className="fixed inset-0 bg-[#0a0a0a]/95 backdrop-blur-sm flex flex-col z-40">
+          <div className="p-4 border-b border-[#f0b419]/30 flex justify-between items-center bg-[#0a0a0a]">
+            <h2 className="text-lg font-bold text-[#f0b419] uppercase tracking-wider">
+              Last 12 Hours History
+            </h2>
+            <button
+              onClick={() => setIsHistoryModalOpen(false)}
+              className="text-gray-400 hover:text-white transition-colors p-1"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {fullHistory.length === 0 ? (
+              <p className="text-sm text-gray-500 italic text-center py-8">
+                No sites logged in the last 12 hours.
+              </p>
+            ) : (
+              fullHistory.map((log) => {
+                const dateObj = new Date(log.timestamp + 'Z');
+                const timeStr = isNaN(dateObj.getTime())
+                  ? log.timestamp.split(' ')[1] || log.timestamp
+                  : format(dateObj, 'HH:mm:ss');
+                
+                const icons = getActiveIcons(log);
+
+                return (
+                  <div
+                    key={log.id}
+                    className="flex items-center justify-between bg-[#141414] border border-gray-800 p-2 rounded text-xs group"
+                  >
+                    <div className="flex-1 truncate pr-2">
+                      <span className="text-gray-500 mr-2">[{timeStr}]</span>
+                      <span className="text-gray-200 font-medium">{log.site_type}</span>
+                      {icons.length > 0 && (
+                        <span className="ml-2">
+                          <span className="text-gray-500 mr-1">-</span>
+                          {icons.map((icon, idx) => (
+                            <span key={idx}>
+                              <span className={`text-[10px] tracking-wider ${icon.color === 'gold' ? 'text-[#f0b419]' : icon.color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]'}`}>
+                                {icon.label}
+                              </span>
+                              {idx < icons.length - 1 && <span className="text-gray-600 mx-0.5">,</span>}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => requestDelete(log.id)}
+                      className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                      title="Delete log"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {logToDelete !== null && (
