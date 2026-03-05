@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent, useRef } from 'react';
+import { useState, useEffect, ChangeEvent, useRef, MouseEvent } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
@@ -44,14 +44,18 @@ const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in windo
 const Titlebar = () => {
   const appWindow = isTauri ? getCurrentWindow() : null;
 
+  const handleMouseDown = (e: MouseEvent) => {
+    if (isTauri && e.button === 0) {
+      appWindow?.startDragging();
+    }
+  };
+
   return (
     <div 
       data-tauri-drag-region 
-      className="h-[28px] bg-[#050505] flex justify-between items-center px-3 border-b border-[#333] select-none shrink-0 cursor-default"
+      onMouseDown={handleMouseDown}
+      className="h-[28px] bg-[#050505] flex justify-end items-center border-b border-[#333] select-none shrink-0 cursor-default"
     >
-      <div data-tauri-drag-region className="flex items-center pointer-events-none">
-        <span data-tauri-drag-region className="text-[10px] font-bold text-[#f0b419] uppercase tracking-widest">EVE AnomTracker</span>
-      </div>
       <div className="flex h-full">
         <button 
           onClick={() => isTauri && appWindow?.minimize()}
