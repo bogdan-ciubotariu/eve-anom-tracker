@@ -17,7 +17,8 @@
         "height": 820,
         "resizable": false,
         "fullscreen": false,
-        "transparent": true
+        "transparent": true,
+        "decorations": false
       }
     ],
     "security": {
@@ -29,6 +30,9 @@
           "windows": ["main"],
           "permissions": [
             "core:default",
+            "window-state:default",
+            "window:allow-minimize",
+            "window:allow-close",
             "sql:default",
             "sql:allow-load",
             "sql:allow-execute",

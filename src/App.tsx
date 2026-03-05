@@ -1,8 +1,9 @@
 import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
-import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon } from 'lucide-react';
+import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus } from 'lucide-react';
 import Settings, { AppSettings } from './Settings';
 
 interface AnomLog {
@@ -37,6 +38,38 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 type ViewState = 'combat' | 'statistics' | 'settings';
+
+const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window);
+
+const Titlebar = () => {
+  const appWindow = isTauri ? getCurrentWindow() : null;
+
+  return (
+    <div 
+      data-tauri-drag-region 
+      className="h-[28px] bg-[#050505] flex justify-between items-center px-3 border-b border-[#333] select-none shrink-0"
+    >
+      <div className="flex items-center space-x-2 pointer-events-none">
+        <Crosshair size={14} className="text-[#f0b419]" />
+        <span className="text-[10px] font-bold text-[#f0b419] uppercase tracking-widest">EVE AnomTracker</span>
+      </div>
+      <div className="flex h-full">
+        <button 
+          onClick={() => isTauri && appWindow?.minimize()}
+          className="h-full px-3 flex items-center justify-center hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-colors text-gray-500"
+        >
+          <Minus size={14} />
+        </button>
+        <button 
+          onClick={() => isTauri && appWindow?.close()}
+          className="h-full px-3 flex items-center justify-center hover:bg-red-600 hover:text-white transition-colors text-gray-500"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default function App() {
   const [db, setDb] = useState<Database | null>(null);
@@ -91,7 +124,6 @@ export default function App() {
 
   const loadSettings = async () => {
     try {
-      const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       if (!isTauri) return;
 
       const settingsJson = await invoke<string>('load_settings');
@@ -110,7 +142,6 @@ export default function App() {
     applySettings(newSettings);
     
     try {
-      const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       if (isTauri) {
         await invoke('save_settings', { settings: JSON.stringify(newSettings) });
       }
@@ -121,10 +152,9 @@ export default function App() {
 
   const applySettings = async (s: AppSettings) => {
     try {
-      const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       if (isTauri) {
-        const width = s.orientation === 'portrait' ? 360 : 820;
-        const height = s.orientation === 'portrait' ? 780 : 420;
+        const width = s.orientation === 'portrait' ? 360 : 650;
+        const height = s.orientation === 'portrait' ? 700 : 360;
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
           scale: s.globalScale,
@@ -174,7 +204,6 @@ export default function App() {
 
   const initDb = async () => {
     try {
-      const isTauri = '__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window;
       let database: any;
 
       if (isTauri) {
@@ -330,8 +359,8 @@ export default function App() {
   };
 
   const isLandscape = settings.orientation === 'landscape';
-  const appWidth = isLandscape ? 820 : 360;
-  const appHeight = isLandscape ? 420 : 780;
+  const appWidth = isLandscape ? 650 : 360;
+  const appHeight = isLandscape ? 360 : 700;
 
   return (
     <div 
@@ -343,6 +372,7 @@ export default function App() {
         opacity: settings.windowOpacity 
       }}
     >
+      <Titlebar />
       <header className="p-4 mb-2 border-b border-[#f0b419]/30 pb-2 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
         <h1 className="text-xl font-bold text-[#f0b419] tracking-wider uppercase">
           EVE AnomTracker
