@@ -47,11 +47,10 @@ const Titlebar = () => {
   return (
     <div 
       data-tauri-drag-region 
-      className="h-[28px] bg-[#050505] flex justify-between items-center px-3 border-b border-[#333] select-none shrink-0"
+      className="h-[28px] bg-[#050505] flex justify-between items-center px-3 border-b border-[#333] select-none shrink-0 cursor-default"
     >
-      <div className="flex items-center space-x-2 pointer-events-none">
-        <Crosshair size={14} className="text-[#f0b419]" />
-        <span className="text-[10px] font-bold text-[#f0b419] uppercase tracking-widest">EVE AnomTracker</span>
+      <div data-tauri-drag-region className="flex items-center pointer-events-none">
+        <span data-tauri-drag-region className="text-[10px] font-bold text-[#f0b419] uppercase tracking-widest">EVE AnomTracker</span>
       </div>
       <div className="flex h-full">
         <button 
