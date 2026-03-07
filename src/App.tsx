@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
-import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown, Activity } from 'lucide-react';
 import Settings, { AppSettings } from './Settings';
 
 interface AnomLog {
@@ -20,6 +20,47 @@ interface AnomLog {
   was_faction_capital_spawn: number;
   was_titan_spawn: number;
 }
+
+interface StatsData {
+  totalSites: number;
+  successfulSites: number;
+  escalations: {
+    ded: number;
+    occupiedMine: number;
+    capitalStaging: number;
+    shieldedStarbase: number;
+    attackSite: number;
+  };
+  specialSpawns: {
+    factionSubcap: number;
+    capital: number;
+    factionCapital: number;
+    titan: number;
+  };
+}
+
+const StatCard = ({ label, count, total, color }: { label: string, count: number, total: number, color: 'green' | 'blue' }) => {
+  const percentage = total > 0 ? ((count / total) * 100).toFixed(2) : '0.00';
+  const colorClass = color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]';
+  const borderColor = color === 'green' ? 'border-[#00ff7f]/20' : 'border-[#00e5ff]/20';
+  const bgHover = color === 'green' ? 'hover:bg-[#00ff7f]/5' : 'hover:bg-[#00e5ff]/5';
+
+  return (
+    <div className={`bg-[#141414] border ${borderColor} p-4 rounded-lg transition-all duration-200 ${bgHover} group`}>
+      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 group-hover:text-gray-400 transition-colors">
+        {label}
+      </div>
+      <div className="flex items-baseline justify-between">
+        <div className={`text-2xl font-bold ${colorClass}`}>
+          {count}
+        </div>
+        <div className="text-xs font-mono text-gray-500">
+          {percentage}%
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const DEFAULT_SITE_TYPES = [
   'Haven',
@@ -109,6 +150,7 @@ export default function App() {
   const [recentCount, setRecentCount] = useState<number>(0);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [stats, setStats] = useState<StatsData | null>(null);
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -183,7 +225,7 @@ export default function App() {
         
         if (currentView === 'statistics') {
           width = 800;
-          height = 600;
+          height = 800;
         }
         
         if (isCollapsed) {
@@ -204,6 +246,9 @@ export default function App() {
 
   useEffect(() => {
     applySettings(settings);
+    if (db && currentView === 'statistics') {
+      fetchStats(db);
+    }
   }, [isCollapsed, currentView]);
 
   const playTone = (type: 'log' | 'delete') => {
@@ -282,6 +327,29 @@ export default function App() {
             const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
             const filtered = this.logs.filter((l: AnomLog) => l.timestamp >= twelveHoursAgo);
 
+            if (query.includes('SUM(CASE WHEN')) {
+              const total = this.logs.length;
+              const successful = this.logs.filter(l => 
+                l.was_ded_escalation === 1 || l.was_occ_mine_escalation === 1 || l.was_cap_stag_escalation === 1 || 
+                l.was_shld_starb_escalation === 1 || l.was_attack_site_escalation === 1 || l.was_faction_npc_spawn === 1 || 
+                l.was_capital_spawn === 1 || l.was_faction_capital_spawn === 1 || l.was_titan_spawn === 1
+              ).length;
+              
+              return [{
+                total,
+                successful,
+                ded: this.logs.filter(l => l.was_ded_escalation === 1).length,
+                occ: this.logs.filter(l => l.was_occ_mine_escalation === 1).length,
+                cap_stg: this.logs.filter(l => l.was_cap_stag_escalation === 1).length,
+                shld: this.logs.filter(l => l.was_shld_starb_escalation === 1).length,
+                atk: this.logs.filter(l => l.was_attack_site_escalation === 1).length,
+                fac_sub: this.logs.filter(l => l.was_faction_npc_spawn === 1).length,
+                cap: this.logs.filter(l => l.was_capital_spawn === 1).length,
+                fac_cap: this.logs.filter(l => l.was_faction_capital_spawn === 1).length,
+                titan: this.logs.filter(l => l.was_titan_spawn === 1).length
+              }] as unknown as T;
+            }
+
             if (query.includes('ORDER BY id DESC LIMIT 3')) {
               if (query.includes("datetime('now', '-12 hours')")) {
                 return [...filtered].reverse().slice(0, 3) as unknown as T;
@@ -323,8 +391,63 @@ export default function App() {
         "SELECT * FROM anom_logs WHERE timestamp >= datetime('now', '-12 hours') ORDER BY id DESC"
       );
       setFullHistory(fullResult as AnomLog[]);
+      
+      if (currentView === 'statistics') {
+        fetchStats(database);
+      }
     } catch (error) {
       console.error('Failed to fetch history:', error);
+    }
+  };
+
+  const fetchStats = async (database: any) => {
+    try {
+      const result = await database.select(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN was_ded_escalation=1 OR was_occ_mine_escalation=1 OR was_cap_stag_escalation=1 OR was_shld_starb_escalation=1 OR was_attack_site_escalation=1 OR was_faction_npc_spawn=1 OR was_capital_spawn=1 OR was_faction_capital_spawn=1 OR was_titan_spawn=1 THEN 1 ELSE 0 END) as successful,
+          SUM(was_ded_escalation) as ded,
+          SUM(was_occ_mine_escalation) as occ,
+          SUM(was_cap_stag_escalation) as cap_stg,
+          SUM(was_shld_starb_escalation) as shld,
+          SUM(was_attack_site_escalation) as atk,
+          SUM(was_faction_npc_spawn) as fac_sub,
+          SUM(was_capital_spawn) as cap,
+          SUM(was_faction_capital_spawn) as fac_cap,
+          SUM(was_titan_spawn) as titan
+        FROM anom_logs
+      `);
+      
+      const row = (result as any[])[0];
+      if (!row || row.total === 0) {
+        setStats({
+          totalSites: 0,
+          successfulSites: 0,
+          escalations: { ded: 0, occupiedMine: 0, capitalStaging: 0, shieldedStarbase: 0, attackSite: 0 },
+          specialSpawns: { factionSubcap: 0, capital: 0, factionCapital: 0, titan: 0 }
+        });
+        return;
+      }
+
+      setStats({
+        totalSites: row.total,
+        successfulSites: row.successful || 0,
+        escalations: {
+          ded: row.ded || 0,
+          occupiedMine: row.occ || 0,
+          capitalStaging: row.cap_stg || 0,
+          shieldedStarbase: row.shld || 0,
+          attackSite: row.atk || 0,
+        },
+        specialSpawns: {
+          factionSubcap: row.fac_sub || 0,
+          capital: row.cap || 0,
+          factionCapital: row.fac_cap || 0,
+          titan: row.titan || 0,
+        }
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
     }
   };
 
@@ -422,7 +545,7 @@ export default function App() {
   const isLandscape = settings.orientation === 'landscape';
   const isStatistics = currentView === 'statistics';
   const appWidth = isStatistics ? 800 : (isLandscape ? 650 : 360);
-  const appHeight = isCollapsed ? 28 : (isStatistics ? 600 : (isLandscape ? 450 : 725));
+  const appHeight = isCollapsed ? 28 : (isStatistics ? 800 : (isLandscape ? 450 : 725));
 
   return (
     <div 
@@ -658,48 +781,58 @@ export default function App() {
           </div>
         )}
 
-        {currentView === 'statistics' && (
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-[#0a0a0a]">
-            {/* Scanline overlay */}
-            <div className="absolute inset-0 bg-scanlines z-10 pointer-events-none opacity-50"></div>
-            
-            {/* Moving scan line */}
-            <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
-              <div className="w-full h-8 bg-gradient-to-b from-transparent via-[#00e5ff]/10 to-transparent animate-scanline"></div>
-            </div>
-
-            {/* Hologram Container */}
-            <div className="relative z-30 text-center animate-flicker">
-              {/* Abstract Tactical Graphics */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-[#00e5ff]/20 rounded-full animate-[spin_20s_linear_infinite]"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-[#00e5ff]/30 rounded-full border-dashed animate-[spin_15s_linear_infinite_reverse]"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 border-t border-b border-[#00e5ff]/10 rounded-full animate-[spin_30s_linear_infinite]"></div>
-              
-              {/* Crosshairs */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-[1px] bg-[#00e5ff]/20"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-80 bg-[#00e5ff]/20"></div>
-
-              {/* Text Content */}
-              <div className="relative bg-[#0a0a0a]/80 backdrop-blur-sm p-6 border border-[#00e5ff]/30 shadow-[0_0_30px_rgba(0,229,255,0.2)]">
-                <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-[#00e5ff]"></div>
-                <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-[#00e5ff]"></div>
-                <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-[#00e5ff]"></div>
-                <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-[#00e5ff]"></div>
-                
-                <h2 className="text-2xl font-bold text-[#00e5ff] uppercase tracking-[0.2em] mb-2 drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]">
-                  Advanced<br/>Statistics
-                </h2>
-                <p className="text-xs text-[#00e5ff]/70 uppercase tracking-widest animate-pulse">
-                  Coming Soon...
-                </p>
-                
-                {/* Data streams */}
-                <div className="mt-4 flex justify-between text-[8px] text-[#00e5ff]/40 font-mono">
-                  <span>SYS.CHK... OK</span>
-                  <span>UPLINK... ESTABLISHED</span>
+        {currentView === 'statistics' && stats && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-8 animate-in fade-in duration-500">
+            {/* Header Stats */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <BarChart2 size={48} />
+                </div>
+                <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Total Sites Tracked</div>
+                <div className="text-5xl font-black text-white tracking-tighter">
+                  {stats.totalSites}
+                </div>
+              </div>
+              <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Activity size={48} />
+                </div>
+                <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Overall Success %</div>
+                <div className="text-5xl font-black text-white tracking-tighter">
+                  {stats.totalSites > 0 ? ((stats.successfulSites / stats.totalSites) * 100).toFixed(2) : '0.00'}%
                 </div>
               </div>
             </div>
+
+            {/* Escalations Section */}
+            <section>
+              <div className="flex items-center space-x-4 mb-4">
+                <h3 className="text-sm font-bold text-[#00ff7f] uppercase tracking-[0.3em]">Escalations</h3>
+                <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00ff7f]/30 to-transparent"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <StatCard label="DED Site" count={stats.escalations.ded} total={stats.totalSites} color="green" />
+                <StatCard label="Occupied Mine" count={stats.escalations.occupiedMine} total={stats.totalSites} color="green" />
+                <StatCard label="Capital Staging" count={stats.escalations.capitalStaging} total={stats.totalSites} color="green" />
+                <StatCard label="Shielded Starbase" count={stats.escalations.shieldedStarbase} total={stats.totalSites} color="green" />
+                <StatCard label="Attack Site" count={stats.escalations.attackSite} total={stats.totalSites} color="green" />
+              </div>
+            </section>
+
+            {/* Special Spawns Section */}
+            <section>
+              <div className="flex items-center space-x-4 mb-4">
+                <h3 className="text-sm font-bold text-[#00e5ff] uppercase tracking-[0.3em]">Special Spawns</h3>
+                <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00e5ff]/30 to-transparent"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <StatCard label="Faction Subcapital" count={stats.specialSpawns.factionSubcap} total={stats.totalSites} color="blue" />
+                <StatCard label="Capital" count={stats.specialSpawns.capital} total={stats.totalSites} color="blue" />
+                <StatCard label="Faction Capital" count={stats.specialSpawns.factionCapital} total={stats.totalSites} color="blue" />
+                <StatCard label="Titan" count={stats.specialSpawns.titan} total={stats.totalSites} color="blue" />
+              </div>
+            </section>
           </div>
         )}
 
