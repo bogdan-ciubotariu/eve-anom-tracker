@@ -39,22 +39,30 @@ interface StatsData {
   };
 }
 
-const StatCard = ({ label, count, total, color }: { label: string, count: number, total: number, color: 'green' | 'blue' }) => {
+const StatCard = ({ label, count, total, color, highlighted = false, className = "" }: { label: string, count: number, total: number, color: 'green' | 'blue', highlighted?: boolean, className?: string }) => {
   const percentage = total > 0 ? ((count / total) * 100).toFixed(2) : '0.00';
   const colorClass = color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]';
-  const borderColor = color === 'green' ? 'border-[#00ff7f]/20' : 'border-[#00e5ff]/20';
+  const borderColor = highlighted 
+    ? (color === 'green' ? 'border-[#00ff7f]/60' : 'border-[#00e5ff]/60')
+    : (color === 'green' ? 'border-[#00ff7f]/20' : 'border-[#00e5ff]/20');
   const bgHover = color === 'green' ? 'hover:bg-[#00ff7f]/5' : 'hover:bg-[#00e5ff]/5';
+  const bgClass = highlighted 
+    ? (color === 'green' ? 'bg-[#00ff7f]/5' : 'bg-[#00e5ff]/5')
+    : 'bg-[#141414]';
+  const shadowClass = highlighted
+    ? (color === 'green' ? 'shadow-[0_0_15px_rgba(0,255,127,0.1)]' : 'shadow-[0_0_15px_rgba(0,229,255,0.1)]')
+    : '';
 
   return (
-    <div className={`bg-[#141414] border ${borderColor} p-4 rounded-lg transition-all duration-200 ${bgHover} group`}>
-      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 group-hover:text-gray-400 transition-colors">
+    <div className={`${bgClass} border ${borderColor} p-4 rounded-lg transition-all duration-200 ${bgHover} ${shadowClass} ${className} group flex flex-col justify-center`}>
+      <div className={`text-[10px] font-bold ${highlighted ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-widest mb-1 group-hover:text-gray-400 transition-colors`}>
         {label}
       </div>
       <div className="flex items-baseline justify-between">
-        <div className={`text-2xl font-bold ${colorClass}`}>
+        <div className={`${highlighted ? 'text-3xl' : 'text-2xl'} font-bold ${colorClass}`}>
           {count}
         </div>
-        <div className="text-xs font-mono text-gray-500">
+        <div className={`text-xs font-mono ${highlighted ? 'text-gray-400' : 'text-gray-500'}`}>
           {percentage}%
         </div>
       </div>
@@ -151,6 +159,7 @@ export default function App() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [statsFilter, setStatsFilter] = useState<string>('All');
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -247,9 +256,9 @@ export default function App() {
   useEffect(() => {
     applySettings(settings);
     if (db && currentView === 'statistics') {
-      fetchStats(db);
+      fetchStats(db, statsFilter);
     }
-  }, [isCollapsed, currentView]);
+  }, [isCollapsed, currentView, statsFilter]);
 
   const playTone = (type: 'log' | 'delete') => {
     if (!settings.enableSounds) return;
@@ -328,8 +337,13 @@ export default function App() {
             const filtered = this.logs.filter((l: AnomLog) => l.timestamp >= twelveHoursAgo);
 
             if (query.includes('SUM(CASE WHEN')) {
-              const total = this.logs.length;
-              const successful = this.logs.filter(l => 
+              let logsToUse = this.logs;
+              if (query.includes('WHERE site_type = ?')) {
+                logsToUse = this.logs.filter(l => l.site_type === bindValues![0]);
+              }
+
+              const total = logsToUse.length;
+              const successful = logsToUse.filter(l => 
                 l.was_ded_escalation === 1 || l.was_occ_mine_escalation === 1 || l.was_cap_stag_escalation === 1 || 
                 l.was_shld_starb_escalation === 1 || l.was_attack_site_escalation === 1 || l.was_faction_npc_spawn === 1 || 
                 l.was_capital_spawn === 1 || l.was_faction_capital_spawn === 1 || l.was_titan_spawn === 1
@@ -338,15 +352,15 @@ export default function App() {
               return [{
                 total,
                 successful,
-                ded: this.logs.filter(l => l.was_ded_escalation === 1).length,
-                occ: this.logs.filter(l => l.was_occ_mine_escalation === 1).length,
-                cap_stg: this.logs.filter(l => l.was_cap_stag_escalation === 1).length,
-                shld: this.logs.filter(l => l.was_shld_starb_escalation === 1).length,
-                atk: this.logs.filter(l => l.was_attack_site_escalation === 1).length,
-                fac_sub: this.logs.filter(l => l.was_faction_npc_spawn === 1).length,
-                cap: this.logs.filter(l => l.was_capital_spawn === 1).length,
-                fac_cap: this.logs.filter(l => l.was_faction_capital_spawn === 1).length,
-                titan: this.logs.filter(l => l.was_titan_spawn === 1).length
+                ded: logsToUse.filter(l => l.was_ded_escalation === 1).length,
+                occ: logsToUse.filter(l => l.was_occ_mine_escalation === 1).length,
+                cap_stg: logsToUse.filter(l => l.was_cap_stag_escalation === 1).length,
+                shld: logsToUse.filter(l => l.was_shld_starb_escalation === 1).length,
+                atk: logsToUse.filter(l => l.was_attack_site_escalation === 1).length,
+                fac_sub: logsToUse.filter(l => l.was_faction_npc_spawn === 1).length,
+                cap: logsToUse.filter(l => l.was_capital_spawn === 1).length,
+                fac_cap: logsToUse.filter(l => l.was_faction_capital_spawn === 1).length,
+                titan: logsToUse.filter(l => l.was_titan_spawn === 1).length
               }] as unknown as T;
             }
 
@@ -393,16 +407,16 @@ export default function App() {
       setFullHistory(fullResult as AnomLog[]);
       
       if (currentView === 'statistics') {
-        fetchStats(database);
+        fetchStats(database, statsFilter);
       }
     } catch (error) {
       console.error('Failed to fetch history:', error);
     }
   };
 
-  const fetchStats = async (database: any) => {
+  const fetchStats = async (database: any, filter: string = 'All') => {
     try {
-      const result = await database.select(`
+      let query = `
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN was_ded_escalation=1 OR was_occ_mine_escalation=1 OR was_cap_stag_escalation=1 OR was_shld_starb_escalation=1 OR was_attack_site_escalation=1 OR was_faction_npc_spawn=1 OR was_capital_spawn=1 OR was_faction_capital_spawn=1 OR was_titan_spawn=1 THEN 1 ELSE 0 END) as successful,
@@ -416,7 +430,15 @@ export default function App() {
           SUM(was_faction_capital_spawn) as fac_cap,
           SUM(was_titan_spawn) as titan
         FROM anom_logs
-      `);
+      `;
+      
+      const params: any[] = [];
+      if (filter !== 'All') {
+        query += " WHERE site_type = ?";
+        params.push(filter);
+      }
+
+      const result = await database.select(query, params);
       
       const row = (result as any[])[0];
       if (!row || row.total === 0) {
@@ -783,6 +805,23 @@ export default function App() {
 
         {currentView === 'statistics' && stats && (
           <div className="flex-1 overflow-y-auto p-6 space-y-8 animate-in fade-in duration-500">
+            {/* Filter Header */}
+            <div className="flex items-center justify-end mb-2">
+              <div className="flex items-center space-x-3">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Filter by Site:</span>
+                <select
+                  value={statsFilter}
+                  onChange={(e) => setStatsFilter(e.target.value)}
+                  className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-xs p-2 rounded focus:outline-none focus:border-[#f0b419] min-w-[150px]"
+                >
+                  <option value="All">All Sites</option>
+                  {siteTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Header Stats */}
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
@@ -798,7 +837,7 @@ export default function App() {
                 <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Activity size={48} />
                 </div>
-                <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Overall Success %</div>
+                <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Special Outcome %</div>
                 <div className="text-5xl font-black text-white tracking-tighter">
                   {stats.totalSites > 0 ? ((stats.successfulSites / stats.totalSites) * 100).toFixed(2) : '0.00'}%
                 </div>
@@ -811,12 +850,12 @@ export default function App() {
                 <h3 className="text-sm font-bold text-[#00ff7f] uppercase tracking-[0.3em]">Escalations</h3>
                 <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00ff7f]/30 to-transparent"></div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <StatCard label="DED Site" count={stats.escalations.ded} total={stats.totalSites} color="green" />
                 <StatCard label="Occupied Mine" count={stats.escalations.occupiedMine} total={stats.totalSites} color="green" />
+                <StatCard label="Attack Site" count={stats.escalations.attackSite} total={stats.totalSites} color="green" highlighted={true} className="row-span-2" />
                 <StatCard label="Capital Staging" count={stats.escalations.capitalStaging} total={stats.totalSites} color="green" />
                 <StatCard label="Shielded Starbase" count={stats.escalations.shieldedStarbase} total={stats.totalSites} color="green" />
-                <StatCard label="Attack Site" count={stats.escalations.attackSite} total={stats.totalSites} color="green" />
               </div>
             </section>
 
@@ -826,7 +865,7 @@ export default function App() {
                 <h3 className="text-sm font-bold text-[#00e5ff] uppercase tracking-[0.3em]">Special Spawns</h3>
                 <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00e5ff]/30 to-transparent"></div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <StatCard label="Faction Subcapital" count={stats.specialSpawns.factionSubcap} total={stats.totalSites} color="blue" />
                 <StatCard label="Capital" count={stats.specialSpawns.capital} total={stats.totalSites} color="blue" />
                 <StatCard label="Faction Capital" count={stats.specialSpawns.factionCapital} total={stats.totalSites} color="blue" />
