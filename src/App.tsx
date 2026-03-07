@@ -178,8 +178,18 @@ export default function App() {
   const applySettings = async (s: AppSettings) => {
     try {
       if (isTauri) {
-        const width = s.orientation === 'portrait' ? 360 : 650;
-        const height = isCollapsed ? 28 : (s.orientation === 'portrait' ? 725 : 450);
+        let width = s.orientation === 'portrait' ? 360 : 650;
+        let height = s.orientation === 'portrait' ? 725 : 450;
+        
+        if (currentView === 'statistics') {
+          width = 800;
+          height = 600;
+        }
+        
+        if (isCollapsed) {
+          height = 28;
+        }
+
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
           scale: s.globalScale,
@@ -194,7 +204,7 @@ export default function App() {
 
   useEffect(() => {
     applySettings(settings);
-  }, [isCollapsed]);
+  }, [isCollapsed, currentView]);
 
   const playTone = (type: 'log' | 'delete') => {
     if (!settings.enableSounds) return;
@@ -410,8 +420,9 @@ export default function App() {
   };
 
   const isLandscape = settings.orientation === 'landscape';
-  const appWidth = isLandscape ? 650 : 360;
-  const appHeight = isCollapsed ? 28 : (isLandscape ? 450 : 725);
+  const isStatistics = currentView === 'statistics';
+  const appWidth = isStatistics ? 800 : (isLandscape ? 650 : 360);
+  const appHeight = isCollapsed ? 28 : (isStatistics ? 600 : (isLandscape ? 450 : 725));
 
   return (
     <div 
