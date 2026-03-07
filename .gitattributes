@@ -1,0 +1,10 @@
+# Mark binary files to prevent corruption from line-ending conversions
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.webp binary
+*.sqlite binary
+*.db binary
