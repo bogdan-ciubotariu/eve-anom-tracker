@@ -846,10 +846,21 @@ export default function App() {
 
             {/* Escalations Section */}
             <section>
-              <div className="flex items-center space-x-4 mb-4">
-                <h3 className="text-sm font-bold text-[#00ff7f] uppercase tracking-[0.3em]">Escalations</h3>
-                <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00ff7f]/30 to-transparent"></div>
-              </div>
+              {(() => {
+                const totalEsc = stats.escalations.ded + stats.escalations.occupiedMine + stats.escalations.capitalStaging + stats.escalations.shieldedStarbase + stats.escalations.attackSite;
+                const escPerc = stats.totalSites > 0 ? ((totalEsc / stats.totalSites) * 100).toFixed(1) : '0.0';
+                return (
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="flex items-baseline space-x-2">
+                      <h3 className="text-sm font-bold text-[#00ff7f] uppercase tracking-[0.3em]">Escalations</h3>
+                      <span className="text-[10px] font-mono text-[#00ff7f]/60 uppercase tracking-widest">
+                        | {totalEsc} Total ({escPerc}%)
+                      </span>
+                    </div>
+                    <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00ff7f]/30 to-transparent"></div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-3 gap-4">
                 <StatCard label="DED Site" count={stats.escalations.ded} total={stats.totalSites} color="green" />
                 <StatCard label="Occupied Mine" count={stats.escalations.occupiedMine} total={stats.totalSites} color="green" />
@@ -861,10 +872,21 @@ export default function App() {
 
             {/* Special Spawns Section */}
             <section>
-              <div className="flex items-center space-x-4 mb-4">
-                <h3 className="text-sm font-bold text-[#00e5ff] uppercase tracking-[0.3em]">Special Spawns</h3>
-                <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00e5ff]/30 to-transparent"></div>
-              </div>
+              {(() => {
+                const totalSpawns = stats.specialSpawns.factionSubcap + stats.specialSpawns.capital + stats.specialSpawns.factionCapital + stats.specialSpawns.titan;
+                const spawnPerc = stats.totalSites > 0 ? ((totalSpawns / stats.totalSites) * 100).toFixed(1) : '0.0';
+                return (
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="flex items-baseline space-x-2">
+                      <h3 className="text-sm font-bold text-[#00e5ff] uppercase tracking-[0.3em]">Special Spawns</h3>
+                      <span className="text-[10px] font-mono text-[#00e5ff]/60 uppercase tracking-widest">
+                        | {totalSpawns} Total ({spawnPerc}%)
+                      </span>
+                    </div>
+                    <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00e5ff]/30 to-transparent"></div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-4 gap-4">
                 <StatCard label="Faction Subcapital" count={stats.specialSpawns.factionSubcap} total={stats.totalSites} color="blue" />
                 <StatCard label="Capital" count={stats.specialSpawns.capital} total={stats.totalSites} color="blue" />
