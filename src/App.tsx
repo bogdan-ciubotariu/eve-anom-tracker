@@ -234,7 +234,7 @@ export default function App() {
 
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
-          scale: s.globalScale,
+          scale: currentView === 'statistics' ? 1.0 : s.globalScale,
           width,
           height
         });
@@ -553,7 +553,7 @@ export default function App() {
       style={{ 
         width: `${appWidth}px`, 
         height: `${appHeight}px`,
-        transform: `scale(${settings.globalScale})`, 
+        transform: `scale(${isStatistics ? 1 : settings.globalScale})`, 
         opacity: settings.windowOpacity,
         border: '1px solid #0a0a0a',
         boxSizing: 'border-box',
