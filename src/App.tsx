@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
 import { format } from 'date-fns';
-import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown, Activity } from 'lucide-react';
+import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown, Activity, ExternalLink } from 'lucide-react';
 import Settings, { AppSettings } from './Settings';
 
 interface AnomLog {
@@ -40,7 +40,7 @@ interface StatsData {
 }
 
 const StatCard = ({ label, count, total, color, highlighted = false, className = "" }: { label: string, count: number, total: number, color: 'green' | 'blue', highlighted?: boolean, className?: string }) => {
-  const percentage = total > 0 ? ((count / total) * 100).toFixed(2) : '0.00';
+  const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
   const colorClass = color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]';
   const borderColor = highlighted 
     ? (color === 'green' ? 'border-[#00ff7f]/60' : 'border-[#00e5ff]/60')
@@ -157,6 +157,11 @@ export default function App() {
   const [fullHistory, setFullHistory] = useState<AnomLog[]>([]);
   const [recentCount, setRecentCount] = useState<number>(0);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isTrackedSitesModalOpen, setIsTrackedSitesModalOpen] = useState(false);
+  const [trackedSites, setTrackedSites] = useState<AnomLog[]>([]);
+  const [trackedSitesPage, setTrackedSitesPage] = useState(0);
+  const [hasMoreTrackedSites, setHasMoreTrackedSites] = useState(true);
+  const [isLoadingTrackedSites, setIsLoadingTrackedSites] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [statsFilter, setStatsFilter] = useState<string>('All');
@@ -364,6 +369,20 @@ export default function App() {
               }] as unknown as T;
             }
 
+            if (query.includes('LIMIT ? OFFSET ?')) {
+              let logsToUse = [...this.logs].reverse();
+              if (query.includes('WHERE site_type = ?')) {
+                logsToUse = logsToUse.filter(l => l.site_type === bindValues![0]);
+                const limit = bindValues![1];
+                const offset = bindValues![2];
+                return logsToUse.slice(offset, offset + limit) as unknown as T;
+              } else {
+                const limit = bindValues![0];
+                const offset = bindValues![1];
+                return logsToUse.slice(offset, offset + limit) as unknown as T;
+              }
+            }
+
             if (query.includes('ORDER BY id DESC LIMIT 3')) {
               if (query.includes("datetime('now', '-12 hours')")) {
                 return [...filtered].reverse().slice(0, 3) as unknown as T;
@@ -473,6 +492,46 @@ export default function App() {
     }
   };
 
+  const fetchTrackedSites = async (reset: boolean = false) => {
+    if (!db || isLoadingTrackedSites) return;
+    if (!reset && !hasMoreTrackedSites) return;
+
+    setIsLoadingTrackedSites(true);
+    const page = reset ? 0 : trackedSitesPage;
+    const limit = 100;
+    const offset = page * limit;
+
+    try {
+      let query = "SELECT * FROM anom_logs";
+      const params: any[] = [];
+
+      if (statsFilter !== 'All') {
+        query += " WHERE site_type = ?";
+        params.push(statsFilter);
+      }
+
+      query += " ORDER BY id DESC LIMIT ? OFFSET ?";
+      params.push(limit, offset);
+
+      const result = await db.select(query, params);
+      const newLogs = result as AnomLog[];
+
+      if (reset) {
+        setTrackedSites(newLogs);
+        setTrackedSitesPage(1);
+      } else {
+        setTrackedSites(prev => [...prev, ...newLogs]);
+        setTrackedSitesPage(page + 1);
+      }
+
+      setHasMoreTrackedSites(newLogs.length === limit);
+    } catch (error) {
+      console.error('Failed to fetch tracked sites:', error);
+    } finally {
+      setIsLoadingTrackedSites(false);
+    }
+  };
+
   const handleSiteTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setSiteType(val);
@@ -537,6 +596,7 @@ export default function App() {
       await db.execute('DELETE FROM anom_logs WHERE id = $1', [logToDelete]);
       setLogToDelete(null);
       fetchHistory(db);
+      setTrackedSites(prev => prev.filter(log => log.id !== logToDelete));
       
       playTone('delete');
       showToast('Log successfully deleted');
@@ -739,7 +799,7 @@ export default function App() {
                 </h2>
                 <button
                   onClick={() => setIsHistoryModalOpen(true)}
-                  className="text-xs text-gray-400 hover:text-[#f0b419] transition-colors"
+                  className="text-xs text-gray-400 hover:text-[#f0b419] transition-colors cursor-pointer"
                 >
                   View
                 </button>
@@ -754,8 +814,8 @@ export default function App() {
                     // Handle SQLite date string
                     const dateObj = new Date(log.timestamp + 'Z'); // Append Z to force UTC parsing if SQLite returns UTC
                     const timeStr = isNaN(dateObj.getTime())
-                      ? log.timestamp.split(' ')[1] || log.timestamp
-                      : format(dateObj, 'HH:mm:ss');
+                      ? log.timestamp
+                      : format(dateObj, 'MMM dd HH:mm:ss');
                     
                     const icons = getActiveIcons(log);
 
@@ -818,13 +878,27 @@ export default function App() {
 
             {/* Header Stats */}
             <div className="grid grid-cols-2 gap-6">
-              <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
+              <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group flex flex-col justify-between min-h-[140px]">
                 <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                   <BarChart2 size={48} />
                 </div>
-                <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Total Sites Tracked</div>
-                <div className="text-5xl font-black text-white tracking-tighter">
-                  {stats.totalSites}
+                <div>
+                  <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Total Sites Tracked</div>
+                  <div className="text-5xl font-black text-white tracking-tighter">
+                    {stats.totalSites}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button 
+                    onClick={() => {
+                      setIsTrackedSitesModalOpen(true);
+                      fetchTrackedSites(true);
+                    }}
+                    className="text-[10px] font-bold text-[#f0b419] hover:text-white transition-colors uppercase tracking-widest flex items-center space-x-1 p-2 -mr-2 -mb-2 cursor-pointer"
+                  >
+                    <span>View</span>
+                    <ExternalLink size={10} />
+                  </button>
                 </div>
               </div>
               <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
@@ -833,7 +907,7 @@ export default function App() {
                 </div>
                 <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Special Outcome %</div>
                 <div className="text-5xl font-black text-white tracking-tighter">
-                  {stats.totalSites > 0 ? ((stats.successfulSites / stats.totalSites) * 100).toFixed(2) : '0.00'}%
+                  {stats.totalSites > 0 ? ((stats.successfulSites / stats.totalSites) * 100).toFixed(1) : '0.0'}%
                 </div>
               </div>
             </div>
@@ -925,8 +999,8 @@ export default function App() {
               fullHistory.map((log) => {
                 const dateObj = new Date(log.timestamp + 'Z');
                 const timeStr = isNaN(dateObj.getTime())
-                  ? log.timestamp.split(' ')[1] || log.timestamp
-                  : format(dateObj, 'HH:mm:ss');
+                  ? log.timestamp
+                  : format(dateObj, 'MMM dd HH:mm:ss');
                 
                 const icons = getActiveIcons(log);
 
@@ -997,6 +1071,91 @@ export default function App() {
       {toastMessage && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[328px] text-center whitespace-nowrap bg-[#141414] border border-[#f0b419]/50 text-[#f0b419] px-4 py-2 rounded shadow-[0_0_10px_rgba(240,180,25,0.2)] text-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           {toastMessage}
+        </div>
+      )}
+
+      {/* Tracked Sites Modal */}
+      {isTrackedSitesModalOpen && (
+        <div className="fixed inset-0 bg-[#0a0a0a]/95 backdrop-blur-sm flex flex-col z-40">
+          <div className="p-4 border-b border-[#f0b419]/30 flex justify-between items-center bg-[#0a0a0a]">
+            <div className="flex items-baseline space-x-3">
+              <h2 className="text-lg font-bold text-[#f0b419] uppercase tracking-wider">
+                Tracked Sites
+              </h2>
+              <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">
+                | Filter: {statsFilter}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsTrackedSitesModalOpen(false)}
+              className="text-gray-400 hover:text-white transition-colors p-1"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div 
+            className="flex-1 overflow-y-auto p-4 space-y-2"
+            onScroll={(e) => {
+              const target = e.currentTarget;
+              if (target.scrollHeight - target.scrollTop <= target.clientHeight + 100) {
+                fetchTrackedSites();
+              }
+            }}
+          >
+            {trackedSites.length === 0 && !isLoadingTrackedSites ? (
+              <p className="text-sm text-gray-500 italic text-center py-8">
+                No sites tracked yet.
+              </p>
+            ) : (
+              <>
+                {trackedSites.map((log) => {
+                  const dateObj = new Date(log.timestamp + 'Z');
+                  const timeStr = isNaN(dateObj.getTime())
+                    ? log.timestamp
+                    : format(dateObj, 'MMM dd HH:mm:ss');
+                  
+                  const icons = getActiveIcons(log);
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="flex items-center justify-between bg-[#141414] border border-gray-800 p-2 rounded text-xs group"
+                    >
+                      <div className="flex-1 truncate pr-2">
+                        <span className="text-gray-500 mr-2">[{timeStr}]</span>
+                        <span className="text-gray-200 font-medium">{log.site_type}</span>
+                        {icons.length > 0 && (
+                          <span className="ml-2">
+                            <span className="text-gray-500 mr-1">-</span>
+                            {icons.map((icon, idx) => (
+                              <span key={idx}>
+                                <span className={`text-[10px] tracking-wider ${icon.color === 'gold' ? 'text-[#f0b419]' : icon.color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]'}`}>
+                                  {icon.label}
+                                </span>
+                                {idx < icons.length - 1 && <span className="text-gray-600 mx-0.5">,</span>}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => requestDelete(log.id)}
+                        className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                        title="Delete log"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {isLoadingTrackedSites && (
+                  <div className="text-center py-4">
+                    <div className="inline-block w-4 h-4 border-2 border-[#f0b419] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
