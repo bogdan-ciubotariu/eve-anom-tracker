@@ -608,12 +608,6 @@ export default function App() {
       </header>
 
       <div className="flex-1 flex flex-col p-4 overflow-hidden relative">
-        {dbError && (
-          <div className="bg-red-900/50 text-red-200 p-2 text-xs rounded mb-4 border border-red-500/50">
-            DB Error: {dbError}
-          </div>
-        )}
-
         {currentView === 'combat' && (
           <div className={`flex-1 flex ${isLandscape ? 'flex-row space-x-6' : 'flex-col'} overflow-hidden`}>
             <div className={isLandscape ? 'w-1/2 flex flex-col' : ''}>
@@ -804,7 +798,7 @@ export default function App() {
         )}
 
         {currentView === 'statistics' && stats && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 animate-in fade-in duration-500">
+          <div className="flex-1 overflow-y-auto pt-3 px-6 pb-6 space-y-8 animate-in fade-in duration-500">
             {/* Filter Header */}
             <div className="flex items-center justify-end mb-2">
               <div className="flex items-center space-x-3">
@@ -899,6 +893,12 @@ export default function App() {
 
         {currentView === 'settings' && (
           <Settings settings={settings} onSettingsChange={saveSettings} />
+        )}
+
+        {dbError && (
+          <div className="bg-red-900/50 text-red-200 p-2 text-xs rounded mt-4 border border-red-500/50">
+            DB Error: {dbError}
+          </div>
         )}
       </div>
 
