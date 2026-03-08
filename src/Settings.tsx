@@ -1,6 +1,6 @@
 import { ChangeEvent, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Folder, Save, Loader2 } from 'lucide-react';
+import { Folder, Save, Loader2, ExternalLink } from 'lucide-react';
 
 export interface AppSettings {
   alwaysOnTop: boolean;
@@ -213,16 +213,16 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
             </span>
             <div className="flex items-center space-x-2">
               <span className={`text-xs font-bold ${
-                new Date().getTime() - new Date(settings.lastAutoBackup).getTime() < 24 * 60 * 60 * 1000
+                settings.lastAutoBackup === new Date().toISOString().split('T')[0]
                   ? 'text-emerald-500'
                   : 'text-[#f0b419]'
               }`}>
-                {new Date(settings.lastAutoBackup).toLocaleString()}
+                {settings.lastAutoBackup}
               </span>
               <span className="text-[10px] text-gray-500">
-                ({Math.floor((new Date().getTime() - new Date(settings.lastAutoBackup).getTime()) / (1000 * 60 * 60 * 24)) === 0 
+                ({settings.lastAutoBackup === new Date().toISOString().split('T')[0]
                   ? 'Today' 
-                  : `${Math.floor((new Date().getTime() - new Date(settings.lastAutoBackup).getTime()) / (1000 * 60 * 60 * 24))} days ago`}
+                  : `${Math.floor((new Date(new Date().toISOString().split('T')[0]).getTime() - new Date(settings.lastAutoBackup).getTime()) / (1000 * 60 * 60 * 24))} days ago`}
                 )
               </span>
             </div>
@@ -259,6 +259,19 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
               title="Browse"
             >
               <Folder size={14} />
+            </button>
+            <button
+              onClick={async () => {
+                if (settings.backupPath) {
+                  await invoke('open_folder', { path: settings.backupPath });
+                } else {
+                  showToast('Please select a backup path first');
+                }
+              }}
+              className="bg-[#141414] border border-[#f0b419]/50 text-[#f0b419] p-2 rounded hover:bg-[#f0b419]/10 transition-colors"
+              title="Open Folder"
+            >
+              <ExternalLink size={14} />
             </button>
           </div>
         </div>

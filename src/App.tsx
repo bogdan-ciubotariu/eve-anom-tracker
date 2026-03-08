@@ -311,12 +311,14 @@ export default function App() {
   const checkAutoBackup = async (currentSettings: AppSettings) => {
     if (currentSettings.autoBackupFrequency === 'off' || !currentSettings.backupPath) return;
 
-    const lastBackup = currentSettings.lastAutoBackup ? new Date(currentSettings.lastAutoBackup) : new Date(0);
     const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // "YYYY-MM-DD"
     
-    // Normalize to date only (midnight) for date-based frequency check
-    const lastBackupDate = new Date(lastBackup.getFullYear(), lastBackup.getMonth(), lastBackup.getDate());
-    const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (currentSettings.lastAutoBackup === todayStr) return; // Already backed up today
+
+    const lastBackupStr = currentSettings.lastAutoBackup || '1970-01-01';
+    const lastBackupDate = new Date(lastBackupStr);
+    const nowDate = new Date(todayStr);
     
     const diffMs = nowDate.getTime() - lastBackupDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -341,8 +343,8 @@ export default function App() {
           destZip: backupDest 
         });
 
-        // Update last backup timestamp
-        const updatedSettings = { ...currentSettings, lastAutoBackup: now.toISOString() };
+        // Update last backup date
+        const updatedSettings = { ...currentSettings, lastAutoBackup: todayStr };
         await saveSettings(updatedSettings);
         
         setIsAutoBackupModalOpen(true);
