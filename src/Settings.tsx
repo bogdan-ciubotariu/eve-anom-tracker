@@ -63,27 +63,21 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
 
     setIsBackingUp(true);
     try {
-      const { copyFile, mkdir } = await import('@tauri-apps/plugin-fs');
       const dataDir = await invoke<string>('get_data_dir');
       const now = new Date();
       const timestamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
-      const folderName = `${timestamp} EVE AnomTracker Data`;
-      const backupDest = await invoke<string>('join_paths', { base: settings.backupPath, sub: folderName });
+      const zipName = `${timestamp}_EVE_AnomTracker_Backup.zip`;
+      const backupDest = await invoke<string>('join_paths', { base: settings.backupPath, sub: zipName });
 
-      // Create timestamped folder
-      await mkdir(backupDest, { recursive: true });
-
-      // Copy files
       const dbFile = await invoke<string>('join_paths', { base: dataDir, sub: 'anomtracker.db' });
       const settingsFile = await invoke<string>('join_paths', { base: dataDir, sub: 'settings.json' });
       
-      const dbDest = await invoke<string>('join_paths', { base: backupDest, sub: 'anomtracker.db' });
-      const settingsDest = await invoke<string>('join_paths', { base: backupDest, sub: 'settings.json' });
+      await invoke('create_backup_zip', { 
+        srcFiles: [dbFile, settingsFile], 
+        destZip: backupDest 
+      });
 
-      await copyFile(dbFile, dbDest);
-      await copyFile(settingsFile, settingsDest);
-
-      showToast('Backup Successful');
+      showToast('Backup Successful (ZIP created)');
     } catch (error) {
       console.error('Backup failed:', error);
       showToast(`Backup Error: ${error}`);

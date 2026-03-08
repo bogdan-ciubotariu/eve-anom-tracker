@@ -1,7 +1,10 @@
 use std::env;
 use std::fs;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use tauri_plugin_sql::{Migration, MigrationKind};
+use zip::write::SimpleFileOptions;
+use zip::ZipWriter;
 
 fn get_migrations() -> Vec<Migration> {
     vec![
@@ -101,6 +104,44 @@ fn join_paths(base: String, sub: String) -> String {
     path.to_string_lossy().to_string()
 }
 
+#[tauri::command]
+fn create_backup_zip(src_files: Vec<String>, dest_zip: String) -> Result<(), String> {
+    let path = std::path::Path::new(&dest_zip);
+    
+    // Ensure the destination directory exists
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+
+    let file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+    let mut zip = ZipWriter::new(file);
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+
+    for src in src_files {
+        let src_path = std::path::Path::new(&src);
+        if !src_path.exists() {
+            continue;
+        }
+        
+        let name = src_path.file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| format!("Invalid filename for path: {}", src))?;
+            
+        zip.start_file(name, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(src_path).map_err(|e| e.to_string())?;
+        let mut buffer = Vec::new();
+        f.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+        zip.write_all(&buffer).map_err(|e| e.to_string())?;
+    }
+    
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_url = format!("sqlite:{}", get_db_file_path().to_string_lossy());
@@ -120,6 +161,7 @@ pub fn run() {
             get_db_path, 
             get_data_dir,
             join_paths,
+            create_backup_zip,
             apply_window_settings, 
             load_settings, 
             save_settings
