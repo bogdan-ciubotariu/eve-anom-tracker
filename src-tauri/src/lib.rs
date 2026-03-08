@@ -73,6 +73,50 @@ fn save_settings(settings: String) -> Result<(), String> {
     fs::write(path, settings).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn open_folder(path: String) -> Result<(), String> {
+    let path = std::path::Path::new(&path);
+    if !path.exists() {
+        return Err("Path does not exist".to_string());
+    }
+    
+    // If it's a file, open its parent directory
+    let folder_path = if path.is_file() {
+        path.parent().unwrap_or(path)
+    } else {
+        path
+    };
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        Command::new("explorer")
+            .arg(folder_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        Command::new("open")
+            .arg(folder_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        Command::new("xdg-open")
+            .arg(folder_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 fn get_db_file_path() -> PathBuf {
     let mut path = env::current_exe().expect("Failed to get current exe path");
     path.pop(); // Remove the .exe name
@@ -162,6 +206,7 @@ pub fn run() {
             get_data_dir,
             join_paths,
             create_backup_zip,
+            open_folder,
             apply_window_settings, 
             load_settings, 
             save_settings

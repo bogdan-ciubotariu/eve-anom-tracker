@@ -10,6 +10,8 @@ export interface AppSettings {
   enableSounds: boolean;
   orientation: 'portrait' | 'landscape';
   backupPath?: string;
+  autoBackupFrequency: 'off' | 'daily' | 'weekly' | 'monthly';
+  lastAutoBackup?: string;
 }
 
 interface SettingsProps {
@@ -204,6 +206,42 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
         Data Backup
       </h2>
       <div className="space-y-4">
+        {settings.lastAutoBackup && (
+          <div className="flex flex-col space-y-1">
+            <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+              Last Auto-Backup
+            </span>
+            <div className="flex items-center space-x-2">
+              <span className={`text-xs font-bold ${
+                new Date().getTime() - new Date(settings.lastAutoBackup).getTime() < 24 * 60 * 60 * 1000
+                  ? 'text-emerald-500'
+                  : 'text-[#f0b419]'
+              }`}>
+                {new Date(settings.lastAutoBackup).toLocaleString()}
+              </span>
+              <span className="text-[10px] text-gray-500">
+                ({Math.floor((new Date().getTime() - new Date(settings.lastAutoBackup).getTime()) / (1000 * 60 * 60 * 24))} days ago)
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-300 uppercase tracking-wider">
+            Auto-Backup Frequency
+          </label>
+          <select
+            value={settings.autoBackupFrequency}
+            onChange={(e) => handleChange('autoBackupFrequency', e.target.value)}
+            className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded text-xs focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+          >
+            <option value="off">Off</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
         <div className="space-y-2">
           <label className="text-xs font-medium text-gray-300 uppercase tracking-wider">
             Backup Destination

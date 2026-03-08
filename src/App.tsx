@@ -85,6 +85,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableSounds: true,
   orientation: 'portrait',
   backupPath: '',
+  autoBackupFrequency: 'off',
 };
 
 type ViewState = 'combat' | 'statistics' | 'settings';
@@ -167,6 +168,7 @@ export default function App() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [statsFilter, setStatsFilter] = useState<string>('All');
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
+  const [isAutoBackupModalOpen, setIsAutoBackupModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -214,6 +216,11 @@ export default function App() {
       const newSettings = { ...DEFAULT_SETTINGS, ...loadedSettings };
       setSettings(newSettings);
       applySettings(newSettings);
+      
+      // Check for auto-backup after settings are loaded
+      if (isTauri) {
+        checkAutoBackup(newSettings);
+      }
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -298,6 +305,45 @@ export default function App() {
       }
     } catch (e) {
       console.error('Audio playback failed', e);
+    }
+  };
+
+  const checkAutoBackup = async (currentSettings: AppSettings) => {
+    if (currentSettings.autoBackupFrequency === 'off' || !currentSettings.backupPath) return;
+
+    const lastBackup = currentSettings.lastAutoBackup ? new Date(currentSettings.lastAutoBackup) : new Date(0);
+    const now = new Date();
+    const diffMs = now.getTime() - lastBackup.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    let shouldBackup = false;
+    if (currentSettings.autoBackupFrequency === 'daily' && diffDays >= 1) shouldBackup = true;
+    if (currentSettings.autoBackupFrequency === 'weekly' && diffDays >= 7) shouldBackup = true;
+    if (currentSettings.autoBackupFrequency === 'monthly' && diffDays >= 30) shouldBackup = true;
+
+    if (shouldBackup) {
+      try {
+        const dataDir = await invoke<string>('get_data_dir');
+        const timestamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
+        const zipName = `${timestamp}_EVE_AnomTracker_AutoBackup.zip`;
+        const backupDest = await invoke<string>('join_paths', { base: currentSettings.backupPath, sub: zipName });
+
+        const dbFile = await invoke<string>('join_paths', { base: dataDir, sub: 'anomtracker.db' });
+        const settingsFile = await invoke<string>('join_paths', { base: dataDir, sub: 'settings.json' });
+        
+        await invoke('create_backup_zip', { 
+          srcFiles: [dbFile, settingsFile], 
+          destZip: backupDest 
+        });
+
+        // Update last backup timestamp
+        const updatedSettings = { ...currentSettings, lastAutoBackup: now.toISOString() };
+        await saveSettings(updatedSettings);
+        
+        setIsAutoBackupModalOpen(true);
+      } catch (error) {
+        console.error('Auto-backup failed:', error);
+      }
     }
   };
 
@@ -1038,6 +1084,47 @@ export default function App() {
                 );
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Auto Backup Success Modal */}
+      {isAutoBackupModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-sm p-6">
+          <div className="max-w-md w-full bg-[#141414] border-2 border-emerald-500/30 rounded-xl p-8 shadow-[0_0_50px_rgba(16,185,129,0.1)] flex flex-col items-center text-center space-y-6">
+            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center">
+              <Activity size={40} className="text-emerald-500" />
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-xl font-black text-emerald-500 uppercase tracking-tighter">
+                Automatic Backup Successful
+              </h2>
+              <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
+                Your data has been safely archived
+              </p>
+            </div>
+
+            <div className="w-full pt-4 space-y-3">
+              <button
+                onClick={async () => {
+                  if (settings.backupPath) {
+                    await invoke('open_folder', { path: settings.backupPath });
+                  }
+                }}
+                className="w-full py-3 bg-[#1a1a1a] border border-emerald-500/50 text-emerald-500 font-bold text-xs uppercase tracking-widest rounded hover:bg-emerald-500 hover:text-[#0a0a0a] transition-all flex items-center justify-center space-x-2"
+              >
+                <ExternalLink size={14} />
+                <span>Open Backup Folder</span>
+              </button>
+              
+              <button
+                onClick={() => setIsAutoBackupModalOpen(false)}
+                className="w-full py-3 bg-emerald-500 text-[#0a0a0a] font-black text-xs uppercase tracking-widest rounded hover:bg-emerald-400 transition-all"
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}
