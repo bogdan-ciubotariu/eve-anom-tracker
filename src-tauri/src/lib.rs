@@ -86,12 +86,23 @@ fn get_db_path() -> String {
     format!("sqlite:{}", get_db_file_path().to_string_lossy())
 }
 
+#[tauri::command]
+fn get_data_dir() -> String {
+    let mut path = env::current_exe().expect("Failed to get current exe path");
+    path.pop();
+    path.push("data");
+    path.to_string_lossy().to_string()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_url = format!("sqlite:{}", get_db_file_path().to_string_lossy());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_path::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(
             tauri_plugin_sql::Builder::new()
@@ -101,6 +112,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet, 
             get_db_path, 
+            get_data_dir,
             apply_window_settings, 
             load_settings, 
             save_settings

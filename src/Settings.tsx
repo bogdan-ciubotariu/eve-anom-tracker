@@ -1,4 +1,9 @@
-import { ChangeEvent } from 'react';
+import { ChangeEvent, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
+import { copyFile, mkdir } from '@tauri-apps/plugin-fs';
+import { join } from '@tauri-apps/api/path';
+import { Folder, Save, Loader2 } from 'lucide-react';
 
 export interface AppSettings {
   alwaysOnTop: boolean;
@@ -7,16 +12,73 @@ export interface AppSettings {
   customSites: string;
   enableSounds: boolean;
   orientation: 'portrait' | 'landscape';
+  backupPath?: string;
 }
 
 interface SettingsProps {
   settings: AppSettings;
   onSettingsChange: (newSettings: AppSettings) => void;
+  showToast: (message: string) => void;
 }
 
-export default function Settings({ settings, onSettingsChange }: SettingsProps) {
+export default function Settings({ settings, onSettingsChange, showToast }: SettingsProps) {
+  const [isBackingUp, setIsBackingUp] = useState(false);
+
   const handleChange = (key: keyof AppSettings, value: any) => {
     onSettingsChange({ ...settings, [key]: value });
+  };
+
+  const handleBrowse = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Backup Destination'
+      });
+      
+      if (selected) {
+        handleChange('backupPath', selected);
+      }
+    } catch (error) {
+      console.error('Failed to open directory dialog:', error);
+      showToast('Failed to select directory');
+    }
+  };
+
+  const handleBackup = async () => {
+    if (!settings.backupPath) {
+      showToast('Please select a backup path first');
+      return;
+    }
+
+    setIsBackingUp(true);
+    try {
+      const dataDir = await invoke<string>('get_data_dir');
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
+      const folderName = `${timestamp} EVE AnomTracker Data`;
+      const backupDest = await join(settings.backupPath, folderName);
+
+      // Create timestamped folder
+      await mkdir(backupDest, { recursive: true });
+
+      // Copy files
+      const dbFile = await join(dataDir, 'anomtracker.db');
+      const settingsFile = await join(dataDir, 'settings.json');
+      
+      const dbDest = await join(backupDest, 'anomtracker.db');
+      const settingsDest = await join(backupDest, 'settings.json');
+
+      await copyFile(dbFile, dbDest);
+      await copyFile(settingsFile, settingsDest);
+
+      showToast('Backup Successful');
+    } catch (error) {
+      console.error('Backup failed:', error);
+      showToast(`Backup Error: ${error}`);
+    } finally {
+      setIsBackingUp(false);
+    }
   };
 
   return (
@@ -117,7 +179,7 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
       <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
         Sound Settings
       </h2>
-      <label className="flex items-center justify-between cursor-pointer group">
+      <label className="flex items-center justify-between cursor-pointer group mb-8">
         <span className="text-xs font-medium text-gray-300 uppercase tracking-wider group-hover:text-[#f0b419] transition-colors">
           Enable UI Sounds
         </span>
@@ -132,6 +194,47 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
           <div className={`absolute left-1 top-1 bg-[#0a0a0a] w-4 h-4 rounded-full transition-transform ${settings.enableSounds ? 'transform translate-x-4' : ''}`}></div>
         </div>
       </label>
+
+      <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
+        Data Backup
+      </h2>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-300 uppercase tracking-wider">
+            Backup Destination
+          </label>
+          <div className="flex space-x-2">
+            <div className="flex-1 bg-[#141414] border border-[#f0b419]/30 rounded p-2 text-[10px] text-gray-400 truncate">
+              {settings.backupPath || 'No path selected'}
+            </div>
+            <button
+              onClick={handleBrowse}
+              className="bg-[#141414] border border-[#f0b419]/50 text-[#f0b419] p-2 rounded hover:bg-[#f0b419]/10 transition-colors"
+              title="Browse"
+            >
+              <Folder size={14} />
+            </button>
+          </div>
+        </div>
+        
+        <button
+          onClick={handleBackup}
+          disabled={isBackingUp}
+          className="w-full py-3 bg-[#f0b419]/10 border border-[#f0b419] text-[#f0b419] font-bold text-xs uppercase tracking-[0.2em] rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isBackingUp ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              <span>Backing up...</span>
+            </>
+          ) : (
+            <>
+              <Save size={16} />
+              <span>Backup Data Now</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

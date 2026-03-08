@@ -38,7 +38,14 @@
             "sql:default",
             "sql:allow-load",
             "sql:allow-execute",
-            "sql:allow-select"
+            "sql:allow-select",
+            "fs:default",
+            "dialog:default",
+            "path:default",
+            "fs:allow-write-recursive",
+            "fs:allow-read-recursive",
+            "fs:allow-copy",
+            "fs:allow-mkdir"
           ]
         }
       ]

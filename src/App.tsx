@@ -84,6 +84,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   customSites: "Haven, Sanctum, Forsaken Hub, Forsaken Rally Point",
   enableSounds: true,
   orientation: 'portrait',
+  backupPath: '',
 };
 
 type ViewState = 'combat' | 'statistics' | 'settings';
@@ -966,7 +967,7 @@ export default function App() {
         )}
 
         {currentView === 'settings' && (
-          <Settings settings={settings} onSettingsChange={saveSettings} />
+          <Settings settings={settings} onSettingsChange={saveSettings} showToast={showToast} />
         )}
 
         {dbError && (
