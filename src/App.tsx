@@ -2,7 +2,7 @@ import { useState, useEffect, ChangeEvent, useRef, MouseEvent } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown, Activity, ExternalLink, HardDrive } from 'lucide-react';
 import Settings, { AppSettings } from './Settings';
 
@@ -167,6 +167,9 @@ export default function App() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [statsFilter, setStatsFilter] = useState<string>('All');
+  const [dateRangeType, setDateRangeType] = useState<'All' | 'Today' | 'Week' | 'Month' | 'Custom'>('All');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
   const [isAutoBackupModalOpen, setIsAutoBackupModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -283,6 +286,25 @@ export default function App() {
     }
   };
 
+  const getDateRange = (type: string, customStart: string, customEnd: string) => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    
+    switch (type) {
+      case 'Today':
+        return { start: today, end: today };
+      case 'Week':
+        return { start: format(subDays(now, 7), 'yyyy-MM-dd'), end: today };
+      case 'Month':
+        return { start: format(subDays(now, 30), 'yyyy-MM-dd'), end: today };
+      case 'Custom':
+        return { start: customStart || null, end: customEnd || null };
+      case 'All':
+      default:
+        return { start: null, end: null };
+    }
+  };
+
   const applySettings = async (s: AppSettings) => {
     try {
       if (isTauri) {
@@ -315,7 +337,7 @@ export default function App() {
     if (db && currentView === 'statistics') {
       fetchStats(db, statsFilter);
     }
-  }, [isCollapsed, currentView, statsFilter]);
+  }, [isCollapsed, currentView, statsFilter, dateRangeType, customStartDate, customEndDate]);
 
   const playTone = (type: 'log' | 'delete') => {
     if (!settings.enableSounds) return;
@@ -550,9 +572,25 @@ export default function App() {
       `;
       
       const params: any[] = [];
+      const conditions: string[] = [];
+      
       if (filter !== 'All') {
-        query += " WHERE site_type = ?";
+        conditions.push("site_type = ?");
         params.push(filter);
+      }
+
+      const dateRange = getDateRange(dateRangeType, customStartDate, customEndDate);
+      if (dateRange.start) {
+        conditions.push("date(timestamp) >= ?");
+        params.push(dateRange.start);
+      }
+      if (dateRange.end) {
+        conditions.push("date(timestamp) <= ?");
+        params.push(dateRange.end);
+      }
+
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
       }
 
       const result = await database.select(query, params);
@@ -602,10 +640,25 @@ export default function App() {
     try {
       let query = "SELECT * FROM anom_logs";
       const params: any[] = [];
+      const conditions: string[] = [];
 
       if (statsFilter !== 'All') {
-        query += " WHERE site_type = ?";
+        conditions.push("site_type = ?");
         params.push(statsFilter);
+      }
+
+      const dateRange = getDateRange(dateRangeType, customStartDate, customEndDate);
+      if (dateRange.start) {
+        conditions.push("date(timestamp) >= ?");
+        params.push(dateRange.start);
+      }
+      if (dateRange.end) {
+        conditions.push("date(timestamp) <= ?");
+        params.push(dateRange.end);
+      }
+
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
       }
 
       query += " ORDER BY id DESC LIMIT ? OFFSET ?";
@@ -958,9 +1011,9 @@ export default function App() {
         {currentView === 'statistics' && stats && (
           <div className="flex-1 overflow-y-auto pt-3 px-6 pb-6 space-y-8 animate-in fade-in duration-500">
             {/* Filter Header */}
-            <div className="flex items-center justify-end mb-2">
+            <div className="flex items-center justify-end mb-2 space-x-6">
               <div className="flex items-center space-x-3">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Filter by Site:</span>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Site:</span>
                 <select
                   value={statsFilter}
                   onChange={(e) => setStatsFilter(e.target.value)}
@@ -970,6 +1023,20 @@ export default function App() {
                   {siteTypes.map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Date:</span>
+                <select
+                  value={dateRangeType}
+                  onChange={(e) => setDateRangeType(e.target.value as any)}
+                  className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-xs p-2 rounded focus:outline-none focus:border-[#f0b419] min-w-[120px]"
+                >
+                  <option value="All">All Time</option>
+                  <option value="Today">Today</option>
+                  <option value="Week">Last Week</option>
+                  <option value="Month">Last Month</option>
                 </select>
               </div>
             </div>
