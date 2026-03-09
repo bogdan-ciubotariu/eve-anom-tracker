@@ -174,7 +174,7 @@ export default function App() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
   const [statsFilter, setStatsFilter] = useState<string>('All');
-  const [dateRangeType, setDateRangeType] = useState<'All' | 'Today' | 'Week' | 'Month' | 'Custom'>('All');
+  const [dateRangeType, setDateRangeType] = useState<'All' | 'Today' | 'Yesterday' | 'Week' | 'Month' | 'Custom'>('All');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
@@ -311,6 +311,10 @@ export default function App() {
     switch (type) {
       case 'Today':
         return { start: today, end: today };
+      case 'Yesterday': {
+        const yesterday = format(subDays(now, 1), 'yyyy-MM-dd');
+        return { start: yesterday, end: yesterday };
+      }
       case 'Week':
         return { start: format(subDays(now, 7), 'yyyy-MM-dd'), end: today };
       case 'Month':
@@ -1163,6 +1167,7 @@ export default function App() {
                 >
                   <option value="All">All Time</option>
                   <option value="Today">Today</option>
+                  <option value="Yesterday">Yesterday</option>
                   <option value="Week">Last Week</option>
                   <option value="Month">Last Month</option>
                 </select>
