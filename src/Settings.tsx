@@ -1,6 +1,14 @@
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Folder, Save, Loader2, ExternalLink } from 'lucide-react';
+import { Folder, Save, Loader2, ExternalLink, Search, X, Plus } from 'lucide-react';
+
+interface SolarSystem {
+  regionID: number;
+  regionName: string;
+  security: number;
+  solarSystemID: number;
+  solarSystemName: string;
+}
 
 export interface AppSettings {
   alwaysOnTop: boolean;
@@ -12,6 +20,7 @@ export interface AppSettings {
   backupPath?: string;
   autoBackupFrequency: 'off' | 'daily' | 'weekly' | 'monthly';
   lastAutoBackup?: string;
+  preferredSystems: string[];
 }
 
 interface SettingsProps {
@@ -24,9 +33,47 @@ const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in windo
 
 export default function Settings({ settings, onSettingsChange, showToast }: SettingsProps) {
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [allSystems, setAllSystems] = useState<SolarSystem[]>([]);
+  const [filteredSystems, setFilteredSystems] = useState<SolarSystem[]>([]);
+
+  useEffect(() => {
+    const loadSystems = async () => {
+      try {
+        const response = await fetch('/solar_systems.json');
+        const data = await response.json();
+        setAllSystems(data);
+      } catch (error) {
+        console.error('Failed to load solar systems:', error);
+      }
+    };
+    loadSystems();
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      const filtered = allSystems
+        .filter(s => s.solarSystemName.toLowerCase().includes(searchTerm.toLowerCase()))
+        .slice(0, 10);
+      setFilteredSystems(filtered);
+    } else {
+      setFilteredSystems([]);
+    }
+  }, [searchTerm, allSystems]);
 
   const handleChange = (key: keyof AppSettings, value: any) => {
     onSettingsChange({ ...settings, [key]: value });
+  };
+
+  const addSystem = (systemName: string) => {
+    if (!settings.preferredSystems.includes(systemName)) {
+      handleChange('preferredSystems', [...settings.preferredSystems, systemName]);
+    }
+    setSearchTerm('');
+  };
+
+  const removeSystem = (systemName: string) => {
+    handleChange('preferredSystems', settings.preferredSystems.filter(s => s !== systemName));
   };
 
   const handleBrowse = async () => {
@@ -165,6 +212,59 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
             onChange={(e) => handleChange('windowOpacity', parseFloat(e.target.value))}
             className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#f0b419]"
           />
+        </div>
+      </div>
+
+      <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
+        Preferred Systems
+      </h2>
+      <div className="space-y-4">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={14} className="text-gray-500" />
+          </div>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-[#141414] border border-[#f0b419]/50 text-white pl-10 pr-3 py-2 rounded text-xs focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419]"
+            placeholder="Search solar systems..."
+          />
+          
+          {filteredSystems.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-[#1a1a1a] border border-[#f0b419]/30 rounded shadow-xl max-h-48 overflow-y-auto">
+              {filteredSystems.map(system => (
+                <button
+                  key={system.solarSystemID}
+                  onClick={() => addSystem(system.solarSystemName)}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#f0b419]/10 hover:text-[#f0b419] flex justify-between items-center group"
+                >
+                  <span>{system.solarSystemName} <span className="text-[10px] text-gray-500">({system.regionName})</span></span>
+                  <Plus size={12} className="opacity-0 group-hover:opacity-100" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {settings.preferredSystems.map(system => (
+            <div 
+              key={system}
+              className="flex items-center space-x-1 bg-[#f0b419]/10 border border-[#f0b419]/30 px-2 py-1 rounded group"
+            >
+              <span className="text-xs text-gray-300">{system}</span>
+              <button
+                onClick={() => removeSystem(system)}
+                className="text-gray-500 hover:text-red-500 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          {settings.preferredSystems.length === 0 && (
+            <p className="text-[10px] text-gray-500 italic">No preferred systems added yet.</p>
+          )}
         </div>
       </div>
 

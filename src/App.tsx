@@ -19,6 +19,9 @@ interface AnomLog {
   was_capital_spawn: number;
   was_faction_capital_spawn: number;
   was_titan_spawn: number;
+  location_region?: string;
+  location_system?: string;
+  location_security?: string;
 }
 
 interface StatsData {
@@ -86,6 +89,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   orientation: 'portrait',
   backupPath: '',
   autoBackupFrequency: 'off',
+  preferredSystems: [],
 };
 
 type ViewState = 'combat' | 'statistics' | 'settings';
@@ -155,6 +159,8 @@ export default function App() {
     : DEFAULT_SITE_TYPES;
 
   const [siteType, setSiteType] = useState(siteTypes[0] || 'Other');
+  const [selectedSystem, setSelectedSystem] = useState<string>('');
+  const [allSystems, setAllSystems] = useState<any[]>([]);
   const [history, setHistory] = useState<AnomLog[]>([]);
   const [fullHistory, setFullHistory] = useState<AnomLog[]>([]);
   const [recentCount, setRecentCount] = useState<number>(0);
@@ -166,6 +172,7 @@ export default function App() {
   const [isLoadingTrackedSites, setIsLoadingTrackedSites] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
   const [statsFilter, setStatsFilter] = useState<string>('All');
   const [dateRangeType, setDateRangeType] = useState<'All' | 'Today' | 'Week' | 'Month' | 'Custom'>('All');
   const [customStartDate, setCustomStartDate] = useState<string>('');
@@ -199,7 +206,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Load persisted site type
+    // Load persisted site type and system
     const savedSiteType = localStorage.getItem('anomtracker_site_type');
     if (savedSiteType && siteTypes.includes(savedSiteType)) {
       setSiteType(savedSiteType);
@@ -210,11 +217,18 @@ export default function App() {
       const MIN_SPLASH_TIME = 3000;
 
       try {
+        // Load solar systems data
+        fetch('/solar_systems.json')
+          .then(res => res.json())
+          .then(data => setAllSystems(data))
+          .catch(err => console.error('Failed to load solar systems:', err));
+
         // Run initialization in parallel
         await Promise.all([
           initDb(),
           loadSettings()
         ]);
+        setIsSettingsLoaded(true);
 
         // Calculate remaining time for splash screen
         const elapsedTime = Date.now() - startTime;
@@ -255,7 +269,10 @@ export default function App() {
 
   const loadSettings = async () => {
     try {
-      if (!isTauri) return;
+      if (!isTauri) {
+        setIsSettingsLoaded(true);
+        return;
+      }
 
       const settingsJson = await invoke<string>('load_settings');
       const loadedSettings = JSON.parse(settingsJson);
@@ -270,6 +287,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
+      setIsSettingsLoaded(true);
     }
   };
 
@@ -338,6 +356,19 @@ export default function App() {
       fetchStats(db, statsFilter);
     }
   }, [isCollapsed, currentView, statsFilter, dateRangeType, customStartDate, customEndDate]);
+
+  useEffect(() => {
+    if (!isSettingsLoaded) return;
+    if (settings.preferredSystems.length > 0) {
+      const savedSystem = localStorage.getItem('anomtracker_selected_system');
+      if (savedSystem && settings.preferredSystems.includes(savedSystem)) {
+        setSelectedSystem(savedSystem);
+      }
+    } else {
+      setSelectedSystem('');
+      localStorage.removeItem('anomtracker_selected_system');
+    }
+  }, [settings.preferredSystems, isSettingsLoaded]);
 
   const playTone = (type: 'log' | 'delete') => {
     if (!settings.enableSounds) return;
@@ -449,6 +480,9 @@ export default function App() {
                 was_capital_spawn: bindValues![7],
                 was_faction_capital_spawn: bindValues![8],
                 was_titan_spawn: bindValues![9],
+                location_region: bindValues![10],
+                location_system: bindValues![11],
+                location_security: bindValues![12],
               };
               this.logs.push(log);
             } else if (query.includes('DELETE FROM anom_logs')) {
@@ -697,12 +731,15 @@ export default function App() {
     if (!db) return;
 
     try {
+      const systemData = allSystems.find(s => s.solarSystemName === selectedSystem);
+      
       await db.execute(
         `INSERT INTO anom_logs (
           site_type, was_ded_escalation, was_occ_mine_escalation, was_cap_stag_escalation,
           was_shld_starb_escalation, was_attack_site_escalation, was_faction_npc_spawn,
-          was_capital_spawn, was_faction_capital_spawn, was_titan_spawn
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          was_capital_spawn, was_faction_capital_spawn, was_titan_spawn,
+          location_region, location_system, location_security
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           siteType,
           toggles.was_ded_escalation ? 1 : 0,
@@ -714,6 +751,9 @@ export default function App() {
           toggles.was_capital_spawn ? 1 : 0,
           toggles.was_faction_capital_spawn ? 1 : 0,
           toggles.was_titan_spawn ? 1 : 0,
+          systemData?.regionName || null,
+          selectedSystem || null,
+          systemData?.security !== undefined ? systemData.security.toString() : null
         ]
       );
 
@@ -824,20 +864,64 @@ export default function App() {
             <div className={isLandscape ? 'w-1/2 flex flex-col' : ''}>
               {!isLandscape && (
                 <div className="mb-4">
-                  <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                    Site Info
-                  </label>
-                  <select
-                    value={siteType}
-                    onChange={handleSiteTypeChange}
-                    className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                  >
-                    {siteTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
+                  {settings.preferredSystems.length > 0 ? (
+                    <div className="flex space-x-3">
+                      <div className="w-[40%]">
+                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                          System
+                        </label>
+                        <select
+                          value={selectedSystem}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedSystem(val);
+                            localStorage.setItem('anomtracker_selected_system', val);
+                          }}
+                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                        >
+                          <option value="">Select...</option>
+                          {settings.preferredSystems.map((sys) => (
+                            <option key={sys} value={sys}>
+                              {sys}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-[60%]">
+                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                          Site Info
+                        </label>
+                        <select
+                          value={siteType}
+                          onChange={handleSiteTypeChange}
+                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                        >
+                          {siteTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                        Site Info
+                      </label>
+                      <select
+                        value={siteType}
+                        onChange={handleSiteTypeChange}
+                        className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                      >
+                        {siteTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -917,23 +1001,65 @@ export default function App() {
 
             <div className={`flex-1 flex flex-col overflow-hidden ${isLandscape ? 'border-l border-gray-800 pl-4' : ''}`}>
               {isLandscape && (
-                <>
-                  <div className="mb-4">
-                    <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                      Site Info
-                    </label>
-                    <select
-                      value={siteType}
-                      onChange={handleSiteTypeChange}
-                      className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                    >
-                      {siteTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="space-y-4 mb-4">
+                  {settings.preferredSystems.length > 0 ? (
+                    <div className="flex space-x-3">
+                      <div className="w-[40%]">
+                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                          System
+                        </label>
+                        <select
+                          value={selectedSystem}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedSystem(val);
+                            localStorage.setItem('anomtracker_selected_system', val);
+                          }}
+                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                        >
+                          <option value="">Select...</option>
+                          {settings.preferredSystems.map((sys) => (
+                            <option key={sys} value={sys}>
+                              {sys}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-[60%]">
+                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                          Site Info
+                        </label>
+                        <select
+                          value={siteType}
+                          onChange={handleSiteTypeChange}
+                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                        >
+                          {siteTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                        Site Info
+                      </label>
+                      <select
+                        value={siteType}
+                        onChange={handleSiteTypeChange}
+                        className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                      >
+                        {siteTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <button
                     onClick={logSite}
                     disabled={!db}
@@ -941,7 +1067,7 @@ export default function App() {
                   >
                     Log Site
                   </button>
-                </>
+                </div>
               )}
               <div className="flex items-center justify-between mb-3 border-b border-[#f0b419]/30 pb-1">
                 <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider flex items-center">
@@ -965,8 +1091,8 @@ export default function App() {
                     // Handle SQLite date string
                     const dateObj = new Date(log.timestamp + 'Z'); // Append Z to force UTC parsing if SQLite returns UTC
                     const timeStr = isNaN(dateObj.getTime())
-                      ? log.timestamp
-                      : format(dateObj, 'MMM dd HH:mm:ss');
+                      ? log.timestamp.split(' ')[1] || log.timestamp
+                      : format(dateObj, 'HH:mm:ss');
                     
                     const icons = getActiveIcons(log);
 
@@ -977,7 +1103,9 @@ export default function App() {
                       >
                         <div className="flex-1 truncate pr-2">
                           <span className="text-gray-500 mr-2">[{timeStr}]</span>
-                          <span className="text-gray-200 font-medium">{log.site_type}</span>
+                          <span className="text-gray-200 font-medium">
+                            {log.location_system ? `${log.location_system} - ` : ''}{log.site_type}
+                          </span>
                           {icons.length > 0 && (
                             <span className="ml-2">
                               <span className="text-gray-500 mr-1">-</span>
@@ -1176,7 +1304,9 @@ export default function App() {
                   >
                     <div className="flex-1 truncate pr-2">
                       <span className="text-gray-500 mr-2">[{timeStr}]</span>
-                      <span className="text-gray-200 font-medium">{log.site_type}</span>
+                      <span className="text-gray-200 font-medium">
+                        {log.location_system ? `${log.location_system} - ` : ''}{log.site_type}
+                      </span>
                       {icons.length > 0 && (
                         <span className="ml-2">
                           <span className="text-gray-500 mr-1">-</span>
@@ -1329,7 +1459,9 @@ export default function App() {
                     >
                       <div className="flex-1 truncate pr-2">
                         <span className="text-gray-500 mr-2">[{timeStr}]</span>
-                        <span className="text-gray-200 font-medium">{log.site_type}</span>
+                        <span className="text-gray-200 font-medium">
+                          {log.location_system ? `${log.location_system} - ` : ''}{log.site_type}
+                        </span>
                         {icons.length > 0 && (
                           <span className="ml-2">
                             <span className="text-gray-500 mr-1">-</span>

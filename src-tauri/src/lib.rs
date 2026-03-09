@@ -31,6 +31,16 @@ fn get_migrations() -> Vec<Migration> {
             );
             ",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_location_columns",
+            sql: "
+            ALTER TABLE anom_logs ADD COLUMN location_region TEXT;
+            ALTER TABLE anom_logs ADD COLUMN location_system TEXT;
+            ALTER TABLE anom_logs ADD COLUMN location_security TEXT;
+            ",
+            kind: MigrationKind::Up,
         }
     ]
 }
