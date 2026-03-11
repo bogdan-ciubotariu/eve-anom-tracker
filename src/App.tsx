@@ -498,13 +498,32 @@ export default function App() {
             return { lastInsertId: this.idCounter, rowsAffected: 1 };
           },
           async select<T>(query: string, bindValues?: any[]): Promise<T> {
+            // Helper to get local date from UTC timestamp string
+            const getLocalDate = (ts: string) => {
+              const d = new Date(ts + 'Z');
+              return format(d, 'yyyy-MM-dd');
+            };
+
             const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
             const filtered = this.logs.filter((l: AnomLog) => l.timestamp >= twelveHoursAgo);
 
             if (query.includes('SUM(CASE WHEN')) {
-              let logsToUse = this.logs;
+              let logsToUse = [...this.logs];
+              let currentParamIdx = 0;
+
               if (query.includes('WHERE site_type = ?')) {
-                logsToUse = this.logs.filter(l => l.site_type === bindValues![0]);
+                const filterVal = bindValues![currentParamIdx++];
+                logsToUse = logsToUse.filter(l => l.site_type === filterVal);
+              }
+
+              if (query.includes("date(timestamp, 'localtime') >= ?")) {
+                const startVal = bindValues![currentParamIdx++];
+                logsToUse = logsToUse.filter(l => getLocalDate(l.timestamp) >= startVal);
+              }
+
+              if (query.includes("date(timestamp, 'localtime') <= ?")) {
+                const endVal = bindValues![currentParamIdx++];
+                logsToUse = logsToUse.filter(l => getLocalDate(l.timestamp) <= endVal);
               }
 
               const total = logsToUse.length;
@@ -538,14 +557,14 @@ export default function App() {
                 logsToUse = logsToUse.filter(l => l.site_type === filterVal);
               }
 
-              if (query.includes('date(timestamp) >= ?')) {
+              if (query.includes("date(timestamp, 'localtime') >= ?")) {
                 const startVal = bindValues![currentParamIdx++];
-                logsToUse = logsToUse.filter(l => l.timestamp.split(' ')[0] >= startVal);
+                logsToUse = logsToUse.filter(l => getLocalDate(l.timestamp) >= startVal);
               }
 
-              if (query.includes('date(timestamp) <= ?')) {
+              if (query.includes("date(timestamp, 'localtime') <= ?")) {
                 const endVal = bindValues![currentParamIdx++];
-                logsToUse = logsToUse.filter(l => l.timestamp.split(' ')[0] <= endVal);
+                logsToUse = logsToUse.filter(l => getLocalDate(l.timestamp) <= endVal);
               }
 
               const limit = bindValues![currentParamIdx++];
@@ -631,11 +650,11 @@ export default function App() {
 
       const dateRange = getDateRange(dateRangeType, customStartDate, customEndDate);
       if (dateRange.start) {
-        conditions.push("date(timestamp) >= ?");
+        conditions.push("date(timestamp, 'localtime') >= ?");
         params.push(dateRange.start);
       }
       if (dateRange.end) {
-        conditions.push("date(timestamp) <= ?");
+        conditions.push("date(timestamp, 'localtime') <= ?");
         params.push(dateRange.end);
       }
 
@@ -699,11 +718,11 @@ export default function App() {
 
       const dateRange = getDateRange(dateRangeType, customStartDate, customEndDate);
       if (dateRange.start) {
-        conditions.push("date(timestamp) >= ?");
+        conditions.push("date(timestamp, 'localtime') >= ?");
         params.push(dateRange.start);
       }
       if (dateRange.end) {
-        conditions.push("date(timestamp) <= ?");
+        conditions.push("date(timestamp, 'localtime') <= ?");
         params.push(dateRange.end);
       }
 
