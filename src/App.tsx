@@ -173,6 +173,7 @@ export default function App() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
   const [statsFilter, setStatsFilter] = useState<string>('All');
   const [dateRangeType, setDateRangeType] = useState<'All' | 'Today' | 'Yesterday' | 'Week' | 'Month' | 'Custom'>('All');
   const [customStartDate, setCustomStartDate] = useState<string>('');
@@ -254,6 +255,7 @@ export default function App() {
               await getCurrentWindow().show();
             }
           }
+          setIsAppReady(true);
         }, remainingTime);
       } catch (error) {
         console.error('Initialization failed:', error);
@@ -837,550 +839,443 @@ export default function App() {
         boxShadow: 'none'
       }}
     >
-      <Titlebar isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
-      <header className="px-4 py-2 border-b border-[#f0b419]/10 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
-        <div className="flex space-x-6">
-          <button 
-            onClick={() => setCurrentView('combat')}
-            className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${currentView === 'combat' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            Combat Log
-          </button>
-          <button 
-            onClick={() => setCurrentView('statistics')}
-            className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${currentView === 'statistics' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            Statistics
-          </button>
-        </div>
-        <button 
-          onClick={() => setCurrentView('settings')}
-          className={`transition-colors p-1 ${currentView === 'settings' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-[#f0b419]'}`}
-          title="Settings"
-        >
-          <SettingsIcon size={18} />
-        </button>
-      </header>
-
-      <div className="flex-1 flex flex-col p-4 overflow-hidden relative">
-        {currentView === 'combat' && (
-          <div className={`flex-1 flex ${isLandscape ? 'flex-row space-x-6' : 'flex-col'} overflow-hidden`}>
-            <div className={isLandscape ? 'w-1/2 flex flex-col' : ''}>
-              {!isLandscape && (
-                <div className="mb-4">
-                  {settings.preferredSystems.length > 0 ? (
-                    <div className="flex space-x-3">
-                      <div className="w-[40%]">
-                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                          System
-                        </label>
-                        <select
-                          value={selectedSystem}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSelectedSystem(val);
-                            localStorage.setItem('anomtracker_selected_system', val);
-                          }}
-                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                        >
-                          <option value="">Select...</option>
-                          {settings.preferredSystems.map((sys) => (
-                            <option key={sys} value={sys}>
-                              {sys}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="w-[60%]">
-                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                          Site Info
-                        </label>
-                        <select
-                          value={siteType}
-                          onChange={handleSiteTypeChange}
-                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                        >
-                          {siteTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                        Site Info
-                      </label>
-                      <select
-                        value={siteType}
-                        onChange={handleSiteTypeChange}
-                        className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                      >
-                        {siteTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="space-y-3">
-                  <div className="text-[10px] font-bold text-[#00ff7f]/70 uppercase tracking-widest mb-1 border-b border-[#00ff7f]/20 pb-1">Escalations</div>
-                  <ToggleButton
-                    label="DED Site"
-                    active={toggles.was_ded_escalation}
-                    onClick={() => toggleState('was_ded_escalation')}
-                    color="green"
-                  />
-                  <ToggleButton
-                    label="Occupied Mine"
-                    active={toggles.was_occ_mine_escalation}
-                    onClick={() => toggleState('was_occ_mine_escalation')}
-                    color="green"
-                  />
-                  <ToggleButton
-                    label="Capital Staging"
-                    active={toggles.was_cap_stag_escalation}
-                    onClick={() => toggleState('was_cap_stag_escalation')}
-                    color="green"
-                  />
-                  <ToggleButton
-                    label="Shielded Starbase"
-                    active={toggles.was_shld_starb_escalation}
-                    onClick={() => toggleState('was_shld_starb_escalation')}
-                    color="green"
-                  />
-                  <ToggleButton
-                    label="Attack Site"
-                    active={toggles.was_attack_site_escalation}
-                    onClick={() => toggleState('was_attack_site_escalation')}
-                    color="green"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div className="text-[10px] font-bold text-[#00e5ff]/70 uppercase tracking-widest mb-1 border-b border-[#00e5ff]/20 pb-1">Special Spawns</div>
-                  <ToggleButton
-                    label="Faction Subcapital"
-                    active={toggles.was_faction_npc_spawn}
-                    onClick={() => toggleState('was_faction_npc_spawn')}
-                    color="blue"
-                  />
-                  <ToggleButton
-                    label="Capital"
-                    active={toggles.was_capital_spawn}
-                    onClick={() => toggleState('was_capital_spawn')}
-                    color="blue"
-                  />
-                  <ToggleButton
-                    label="Faction Capital"
-                    active={toggles.was_faction_capital_spawn}
-                    onClick={() => toggleState('was_faction_capital_spawn')}
-                    color="blue"
-                  />
-                  <ToggleButton
-                    label="Titan"
-                    active={toggles.was_titan_spawn}
-                    onClick={() => toggleState('was_titan_spawn')}
-                    color="blue"
-                  />
-                </div>
-              </div>
-
-              {!isLandscape && (
-                <button
-                  onClick={logSite}
-                  disabled={!db}
-                  className="w-full py-3 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-                >
-                  Log Site
-                </button>
-              )}
+      {isAppReady ? (
+        <>
+          <Titlebar isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+          <header className="px-4 py-2 border-b border-[#f0b419]/10 flex justify-between items-center relative z-20 bg-[#0a0a0a]">
+            <div className="flex space-x-6">
+              <button 
+                onClick={() => setCurrentView('combat')}
+                className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${currentView === 'combat' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Combat Log
+              </button>
+              <button 
+                onClick={() => setCurrentView('statistics')}
+                className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${currentView === 'statistics' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Statistics
+              </button>
             </div>
-
-            <div className={`flex-1 flex flex-col overflow-hidden ${isLandscape ? 'border-l border-gray-800 pl-4' : ''}`}>
-              {isLandscape && (
-                <div className="space-y-4 mb-4">
-                  {settings.preferredSystems.length > 0 ? (
-                    <div className="flex space-x-3">
-                      <div className="w-[40%]">
-                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                          System
-                        </label>
-                        <select
-                          value={selectedSystem}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSelectedSystem(val);
-                            localStorage.setItem('anomtracker_selected_system', val);
-                          }}
-                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                        >
-                          <option value="">Select...</option>
-                          {settings.preferredSystems.map((sys) => (
-                            <option key={sys} value={sys}>
-                              {sys}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="w-[60%]">
-                        <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                          Site Info
-                        </label>
-                        <select
-                          value={siteType}
-                          onChange={handleSiteTypeChange}
-                          className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                        >
-                          {siteTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
-                        Site Info
-                      </label>
-                      <select
-                        value={siteType}
-                        onChange={handleSiteTypeChange}
-                        className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
-                      >
-                        {siteTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <button
-                    onClick={logSite}
-                    disabled={!db}
-                    className="w-full py-3 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-                  >
-                    Log Site
-                  </button>
-                </div>
-              )}
-              <div className="flex items-center justify-between mb-3 border-b border-[#f0b419]/30 pb-1">
-                <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider flex items-center">
-                  Recent History
-                  <span className="text-gray-500 ml-2 font-normal">| {recentCount} SITES</span>
-                </h2>
-                <button
-                  onClick={() => setIsHistoryModalOpen(true)}
-                  className="text-xs text-gray-400 hover:text-[#f0b419] transition-colors cursor-pointer"
-                >
-                  View
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto space-y-2">
-                {history.length === 0 ? (
-                  <p className="text-xs text-gray-500 italic text-center py-4">
-                    No sites logged yet.
-                  </p>
-                ) : (
-                  history.map((log) => {
-                    // Handle SQLite date string
-                    const dateObj = new Date(log.timestamp + 'Z'); // Append Z to force UTC parsing if SQLite returns UTC
-                    const timeStr = isNaN(dateObj.getTime())
-                      ? log.timestamp.split(' ')[1] || log.timestamp
-                      : format(dateObj, 'HH:mm:ss');
-                    
-                    const icons = getActiveIcons(log);
-
-                    return (
-                      <div
-                        key={log.id}
-                        className="flex items-center justify-between bg-[#141414] border border-gray-800 p-2 rounded text-xs group"
-                      >
-                        <div className="flex-1 truncate pr-2">
-                          <span className="text-gray-500 mr-2">[{timeStr}]</span>
-                          <span className="text-gray-200 font-medium">
-                            {log.location_system ? `${log.location_system} - ` : ''}{log.site_type}
-                          </span>
-                          {icons.length > 0 && (
-                            <span className="ml-2">
-                              <span className="text-gray-500 mr-1">-</span>
-                              {icons.map((icon, idx) => (
-                                <span key={idx}>
-                                  <span className={`text-[10px] tracking-wider ${icon.color === 'gold' ? 'text-[#f0b419]' : icon.color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]'}`}>
-                                    {icon.label}
-                                  </span>
-                                  {idx < icons.length - 1 && <span className="text-gray-600 mx-0.5">,</span>}
-                                </span>
-                              ))}
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => requestDelete(log.id)}
-                          className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                          title="Delete log"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentView === 'statistics' && stats && (
-          <div className="flex-1 overflow-y-auto pt-3 px-6 pb-6 space-y-8 animate-in fade-in duration-500">
-            {/* Filter Header */}
-            <div className="flex items-center justify-end mb-2 space-x-6">
-              <div className="flex items-center space-x-3">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Site:</span>
-                <select
-                  value={statsFilter}
-                  onChange={(e) => setStatsFilter(e.target.value)}
-                  className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-xs p-2 rounded focus:outline-none focus:border-[#f0b419] min-w-[150px]"
-                >
-                  <option value="All">All Sites</option>
-                  {siteTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Date:</span>
-                <select
-                  value={dateRangeType}
-                  onChange={(e) => setDateRangeType(e.target.value as any)}
-                  className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-xs p-2 rounded focus:outline-none focus:border-[#f0b419] min-w-[120px]"
-                >
-                  <option value="All">All Time</option>
-                  <option value="Today">Today</option>
-                  <option value="Yesterday">Yesterday</option>
-                  <option value="Week">Last Week</option>
-                  <option value="Month">Last Month</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Header Stats */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group flex flex-col justify-between min-h-[140px]">
-                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <BarChart2 size={48} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Total Sites Tracked</div>
-                  <div className="text-5xl font-black text-white tracking-tighter">
-                    {stats.totalSites}
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <button 
-                    onClick={() => {
-                      setIsTrackedSitesModalOpen(true);
-                      fetchTrackedSites(true);
-                    }}
-                    className="text-[10px] font-bold text-[#f0b419] hover:text-white transition-colors uppercase tracking-widest flex items-center space-x-1 p-2 -mr-2 -mb-2 cursor-pointer"
-                  >
-                    <span>View</span>
-                    <ExternalLink size={10} />
-                  </button>
-                </div>
-              </div>
-              <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Activity size={48} />
-                </div>
-                <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Special Outcome %</div>
-                <div className="text-5xl font-black text-white tracking-tighter">
-                  {stats.totalSites > 0 ? ((stats.successfulSites / stats.totalSites) * 100).toFixed(1) : '0.0'}%
-                </div>
-              </div>
-            </div>
-
-            {/* Escalations Section */}
-            <section>
-              {(() => {
-                const totalEsc = stats.escalations.ded + stats.escalations.occupiedMine + stats.escalations.capitalStaging + stats.escalations.shieldedStarbase + stats.escalations.attackSite;
-                const escPerc = stats.totalSites > 0 ? ((totalEsc / stats.totalSites) * 100).toFixed(1) : '0.0';
-                return (
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="flex items-baseline space-x-2">
-                      <h3 className="text-sm font-bold text-[#00ff7f] uppercase tracking-[0.3em]">Escalations</h3>
-                      <span className="text-[10px] font-mono text-[#00ff7f]/60 uppercase tracking-widest">
-                        | {totalEsc} Total ({escPerc}%)
-                      </span>
-                    </div>
-                    <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00ff7f]/30 to-transparent"></div>
-                  </div>
-                );
-              })()}
-              <div className="grid grid-cols-3 gap-4">
-                <StatCard label="DED Site" count={stats.escalations.ded} total={stats.totalSites} color="green" />
-                <StatCard label="Occupied Mine" count={stats.escalations.occupiedMine} total={stats.totalSites} color="green" />
-                <StatCard label="Attack Site" count={stats.escalations.attackSite} total={stats.totalSites} color="green" highlighted={true} className="row-span-2" />
-                <StatCard label="Capital Staging" count={stats.escalations.capitalStaging} total={stats.totalSites} color="green" />
-                <StatCard label="Shielded Starbase" count={stats.escalations.shieldedStarbase} total={stats.totalSites} color="green" />
-              </div>
-            </section>
-
-            {/* Special Spawns Section */}
-            <section>
-              {(() => {
-                const totalSpawns = stats.specialSpawns.factionSubcap + stats.specialSpawns.capital + stats.specialSpawns.factionCapital + stats.specialSpawns.titan;
-                const spawnPerc = stats.totalSites > 0 ? ((totalSpawns / stats.totalSites) * 100).toFixed(1) : '0.0';
-                return (
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="flex items-baseline space-x-2">
-                      <h3 className="text-sm font-bold text-[#00e5ff] uppercase tracking-[0.3em]">Special Spawns</h3>
-                      <span className="text-[10px] font-mono text-[#00e5ff]/60 uppercase tracking-widest">
-                        | {totalSpawns} Total ({spawnPerc}%)
-                      </span>
-                    </div>
-                    <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00e5ff]/30 to-transparent"></div>
-                  </div>
-                );
-              })()}
-              <div className="grid grid-cols-4 gap-4">
-                <StatCard label="Faction Subcapital" count={stats.specialSpawns.factionSubcap} total={stats.totalSites} color="blue" />
-                <StatCard label="Capital" count={stats.specialSpawns.capital} total={stats.totalSites} color="blue" />
-                <StatCard label="Faction Capital" count={stats.specialSpawns.factionCapital} total={stats.totalSites} color="blue" />
-                <StatCard label="Titan" count={stats.specialSpawns.titan} total={stats.totalSites} color="blue" />
-              </div>
-            </section>
-          </div>
-        )}
-
-        {currentView === 'settings' && (
-          <Settings settings={settings} onSettingsChange={saveSettings} showToast={showToast} />
-        )}
-
-        {dbError && (
-          <div className="bg-red-900/50 text-red-200 p-2 text-xs rounded mt-4 border border-red-500/50">
-            DB Error: {dbError}
-          </div>
-        )}
-      </div>
-
-      {/* Full History Modal */}
-      {isHistoryModalOpen && (
-        <div className="fixed inset-0 bg-[#0a0a0a]/95 backdrop-blur-sm flex flex-col z-40">
-          <div className="p-4 border-b border-[#f0b419]/30 flex justify-between items-center bg-[#0a0a0a]">
-            <h2 className="text-lg font-bold text-[#f0b419] uppercase tracking-wider">
-              Last 12 Hours History
-            </h2>
-            <button
-              onClick={() => setIsHistoryModalOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors p-1"
+            <button 
+              onClick={() => setCurrentView('settings')}
+              className={`transition-colors p-1 ${currentView === 'settings' ? 'text-[#f0b419]' : 'text-gray-500 hover:text-[#f0b419]'}`}
+              title="Settings"
             >
-              <X size={20} />
+              <SettingsIcon size={18} />
             </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {fullHistory.length === 0 ? (
-              <p className="text-sm text-gray-500 italic text-center py-8">
-                No sites logged in the last 12 hours.
-              </p>
-            ) : (
-              fullHistory.map((log) => {
-                const dateObj = new Date(log.timestamp + 'Z');
-                const timeStr = isNaN(dateObj.getTime())
-                  ? log.timestamp
-                  : format(dateObj, 'MMM dd HH:mm:ss');
-                
-                const icons = getActiveIcons(log);
+          </header>
 
-                return (
-                  <div
-                    key={log.id}
-                    className="flex items-center justify-between bg-[#141414] border border-gray-800 p-2 rounded text-xs group"
-                  >
-                    <div className="flex-1 truncate pr-2">
-                      <span className="text-gray-500 mr-2">[{timeStr}]</span>
-                      <span className="text-gray-200 font-medium">
-                        {log.location_system ? `${log.location_system} - ` : ''}{log.site_type}
-                      </span>
-                      {icons.length > 0 && (
-                        <span className="ml-2">
-                          <span className="text-gray-500 mr-1">-</span>
-                          {icons.map((icon, idx) => (
-                            <span key={idx}>
-                              <span className={`text-[10px] tracking-wider ${icon.color === 'gold' ? 'text-[#f0b419]' : icon.color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]'}`}>
-                                {icon.label}
-                              </span>
-                              {idx < icons.length - 1 && <span className="text-gray-600 mx-0.5">,</span>}
-                            </span>
-                          ))}
-                        </span>
+          <div className="flex-1 flex flex-col p-4 overflow-hidden relative">
+            {currentView === 'combat' && (
+              <div className={`flex-1 flex ${isLandscape ? 'flex-row space-x-6' : 'flex-col'} overflow-hidden`}>
+                <div className={isLandscape ? 'w-1/2 flex flex-col' : ''}>
+                  {!isLandscape && (
+                    <div className="mb-4">
+                      {settings.preferredSystems.length > 0 ? (
+                        <div className="flex space-x-3">
+                          <div className="w-[40%]">
+                            <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                              System
+                            </label>
+                            <select
+                              value={selectedSystem}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedSystem(val);
+                                localStorage.setItem('anomtracker_selected_system', val);
+                              }}
+                              className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                            >
+                              <option value="">Select...</option>
+                              {settings.preferredSystems.map((sys) => (
+                                <option key={sys} value={sys}>
+                                  {sys}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="w-[60%]">
+                            <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                              Site Info
+                            </label>
+                            <select
+                              value={siteType}
+                              onChange={handleSiteTypeChange}
+                              className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                            >
+                              {siteTypes.map((type) => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                            Site Info
+                          </label>
+                          <select
+                            value={siteType}
+                            onChange={handleSiteTypeChange}
+                            className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                          >
+                            {siteTypes.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       )}
                     </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="space-y-3">
+                      <div className="text-[10px] font-bold text-[#00ff7f]/70 uppercase tracking-widest mb-1 border-b border-[#00ff7f]/20 pb-1">Escalations</div>
+                      <ToggleButton
+                        label="DED Site"
+                        active={toggles.was_ded_escalation}
+                        onClick={() => toggleState('was_ded_escalation')}
+                        color="green"
+                      />
+                      <ToggleButton
+                        label="Occupied Mine"
+                        active={toggles.was_occ_mine_escalation}
+                        onClick={() => toggleState('was_occ_mine_escalation')}
+                        color="green"
+                      />
+                      <ToggleButton
+                        label="Capital Staging"
+                        active={toggles.was_cap_stag_escalation}
+                        onClick={() => toggleState('was_cap_stag_escalation')}
+                        color="green"
+                      />
+                      <ToggleButton
+                        label="Shielded Starbase"
+                        active={toggles.was_shld_starb_escalation}
+                        onClick={() => toggleState('was_shld_starb_escalation')}
+                        color="green"
+                      />
+                      <ToggleButton
+                        label="Attack Site"
+                        active={toggles.was_attack_site_escalation}
+                        onClick={() => toggleState('was_attack_site_escalation')}
+                        color="green"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="text-[10px] font-bold text-[#00e5ff]/70 uppercase tracking-widest mb-1 border-b border-[#00e5ff]/20 pb-1">Special Spawns</div>
+                      <ToggleButton
+                        label="Faction Subcapital"
+                        active={toggles.was_faction_npc_spawn}
+                        onClick={() => toggleState('was_faction_npc_spawn')}
+                        color="blue"
+                      />
+                      <ToggleButton
+                        label="Capital"
+                        active={toggles.was_capital_spawn}
+                        onClick={() => toggleState('was_capital_spawn')}
+                        color="blue"
+                      />
+                      <ToggleButton
+                        label="Faction Capital"
+                        active={toggles.was_faction_capital_spawn}
+                        onClick={() => toggleState('was_faction_capital_spawn')}
+                        color="blue"
+                      />
+                      <ToggleButton
+                        label="Titan"
+                        active={toggles.was_titan_spawn}
+                        onClick={() => toggleState('was_titan_spawn')}
+                        color="blue"
+                      />
+                    </div>
+                  </div>
+
+                  {!isLandscape && (
                     <button
-                      onClick={() => requestDelete(log.id)}
-                      className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                      title="Delete log"
+                      onClick={logSite}
+                      disabled={!db}
+                      className="w-full py-3 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                     >
-                      <Trash2 size={14} />
+                      Log Site
+                    </button>
+                  )}
+                </div>
+
+                <div className={`flex-1 flex flex-col overflow-hidden ${isLandscape ? 'border-l border-gray-800 pl-4' : ''}`}>
+                  {isLandscape && (
+                    <div className="space-y-4 mb-4">
+                      {settings.preferredSystems.length > 0 ? (
+                        <div className="flex space-x-3">
+                          <div className="w-[40%]">
+                            <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                              System
+                            </label>
+                            <select
+                              value={selectedSystem}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedSystem(val);
+                                localStorage.setItem('anomtracker_selected_system', val);
+                              }}
+                              className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                            >
+                              <option value="">Select...</option>
+                              {settings.preferredSystems.map((sys) => (
+                                <option key={sys} value={sys}>
+                                  {sys}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="w-[60%]">
+                            <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                              Site Info
+                            </label>
+                            <select
+                              value={siteType}
+                              onChange={handleSiteTypeChange}
+                              className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                            >
+                              {siteTypes.map((type) => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-semibold text-[#f0b419] uppercase tracking-wider mb-2">
+                            Site Info
+                          </label>
+                          <select
+                            value={siteType}
+                            onChange={handleSiteTypeChange}
+                            className="w-full bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] appearance-none"
+                          >
+                            {siteTypes.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <button
+                        onClick={logSite}
+                        disabled={!db}
+                        className="w-full py-3 bg-[#141414] border-2 border-[#f0b419] text-[#f0b419] font-bold text-lg uppercase tracking-widest rounded hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-all duration-200 shadow-[0_0_15px_rgba(240,180,25,0.3)] hover:shadow-[0_0_25px_rgba(240,180,25,0.6)] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                      >
+                        Log Site
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mb-3 border-b border-[#f0b419]/30 pb-1">
+                    <h2 className="text-xs font-semibold text-[#f0b419] uppercase tracking-wider flex items-center">
+                      Recent History
+                      <span className="text-gray-500 ml-2 font-normal">| {recentCount} SITES</span>
+                    </h2>
+                    <button
+                      onClick={() => setIsHistoryModalOpen(true)}
+                      className="text-xs text-gray-400 hover:text-[#f0b419] transition-colors cursor-pointer"
+                    >
+                      View
                     </button>
                   </div>
-                );
-              })
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {history.length === 0 ? (
+                      <p className="text-xs text-gray-500 italic text-center py-4">
+                        No sites logged yet.
+                      </p>
+                    ) : (
+                      history.map((log) => {
+                        const dateObj = new Date(log.timestamp + 'Z');
+                        const timeStr = isNaN(dateObj.getTime())
+                          ? log.timestamp.split(' ')[1] || log.timestamp
+                          : format(dateObj, 'HH:mm:ss');
+                        
+                        const icons = getActiveIcons(log);
+
+                        return (
+                          <div
+                            key={log.id}
+                            className="flex items-center justify-between bg-[#141414] border border-gray-800 p-2 rounded text-xs group"
+                          >
+                            <div className="flex-1 truncate pr-2">
+                              <span className="text-gray-500 mr-2">[{timeStr}]</span>
+                              <span className="text-gray-200 font-medium">
+                                {log.location_system ? `${log.location_system} - ` : ''}{log.site_type}
+                              </span>
+                              {icons.length > 0 && (
+                                <span className="ml-2">
+                                  <span className="text-gray-500 mr-1">-</span>
+                                  {icons.map((icon, idx) => (
+                                    <span key={idx}>
+                                      <span className={`text-[10px] tracking-wider ${icon.color === 'gold' ? 'text-[#f0b419]' : icon.color === 'green' ? 'text-[#00ff7f]' : 'text-[#00e5ff]'}`}>
+                                        {icon.label}
+                                      </span>
+                                      {idx < icons.length - 1 && <span className="text-gray-600 mx-0.5">,</span>}
+                                    </span>
+                                  ))}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => requestDelete(log.id)}
+                              className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                              title="Delete log"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {currentView === 'statistics' && stats && (
+              <div className="flex-1 overflow-y-auto pt-3 px-6 pb-6 space-y-8 animate-in fade-in duration-500">
+                {/* Filter Header */}
+                <div className="flex items-center justify-end mb-2 space-x-6">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Site:</span>
+                    <select
+                      value={statsFilter}
+                      onChange={(e) => setStatsFilter(e.target.value)}
+                      className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-xs p-2 rounded focus:outline-none focus:border-[#f0b419] min-w-[150px]"
+                    >
+                      <option value="All">All Sites</option>
+                      {siteTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Date:</span>
+                    <select
+                      value={dateRangeType}
+                      onChange={(e) => setDateRangeType(e.target.value as any)}
+                      className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-xs p-2 rounded focus:outline-none focus:border-[#f0b419] min-w-[120px]"
+                    >
+                      <option value="All">All Time</option>
+                      <option value="Today">Today</option>
+                      <option value="Yesterday">Yesterday</option>
+                      <option value="Week">Last Week</option>
+                      <option value="Month">Last Month</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Header Stats */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group flex flex-col justify-between min-h-[140px]">
+                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <BarChart2 size={48} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Total Sites Tracked</div>
+                      <div className="text-5xl font-black text-white tracking-tighter">
+                        {stats.totalSites}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={() => {
+                          setIsTrackedSitesModalOpen(true);
+                          fetchTrackedSites(true);
+                        }}
+                        className="text-[10px] font-bold text-[#f0b419] hover:text-white transition-colors uppercase tracking-widest flex items-center space-x-1 p-2 -mr-2 -mb-2 cursor-pointer"
+                      >
+                        <span>View</span>
+                        <ExternalLink size={10} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-[#141414] border border-[#f0b419]/30 p-6 rounded-xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Activity size={48} />
+                    </div>
+                    <div className="text-xs font-bold text-[#f0b419] uppercase tracking-[0.2em] mb-2">Special Outcome %</div>
+                    <div className="text-5xl font-black text-white tracking-tighter">
+                      {stats.totalSites > 0 ? ((stats.successfulSites / stats.totalSites) * 100).toFixed(1) : '0.0'}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Escalations Section */}
+                <section>
+                  {(() => {
+                    const totalEsc = stats.escalations.ded + stats.escalations.occupiedMine + stats.escalations.capitalStaging + stats.escalations.shieldedStarbase + stats.escalations.attackSite;
+                    const escPerc = stats.totalSites > 0 ? ((totalEsc / stats.totalSites) * 100).toFixed(1) : '0.0';
+                    return (
+                      <div className="flex items-center space-x-4 mb-4">
+                        <div className="flex items-baseline space-x-2">
+                          <h3 className="text-sm font-bold text-[#00ff7f] uppercase tracking-[0.3em]">Escalations</h3>
+                          <span className="text-[10px] font-mono text-[#00ff7f]/60 uppercase tracking-widest">
+                            | {totalEsc} Total ({escPerc}%)
+                          </span>
+                        </div>
+                        <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00ff7f]/30 to-transparent"></div>
+                      </div>
+                    );
+                  })()}
+                  <div className="grid grid-cols-3 gap-4">
+                    <StatCard label="DED Site" count={stats.escalations.ded} total={stats.totalSites} color="green" />
+                    <StatCard label="Occupied Mine" count={stats.escalations.occupiedMine} total={stats.totalSites} color="green" />
+                    <StatCard label="Attack Site" count={stats.escalations.attackSite} total={stats.totalSites} color="green" highlighted={true} className="row-span-2" />
+                    <StatCard label="Capital Staging" count={stats.escalations.capitalStaging} total={stats.totalSites} color="green" />
+                    <StatCard label="Shielded Starbase" count={stats.escalations.shieldedStarbase} total={stats.totalSites} color="green" />
+                  </div>
+                </section>
+
+                {/* Special Spawns Section */}
+                <section>
+                  {(() => {
+                    const totalSpawns = stats.specialSpawns.factionSubcap + stats.specialSpawns.capital + stats.specialSpawns.factionCapital + stats.specialSpawns.titan;
+                    const spawnPerc = stats.totalSites > 0 ? ((totalSpawns / stats.totalSites) * 100).toFixed(1) : '0.0';
+                    return (
+                      <div className="flex items-center space-x-4 mb-4">
+                        <div className="flex items-baseline space-x-2">
+                          <h3 className="text-sm font-bold text-[#00e5ff] uppercase tracking-[0.3em]">Special Spawns</h3>
+                          <span className="text-[10px] font-mono text-[#00e5ff]/60 uppercase tracking-widest">
+                            | {totalSpawns} Total ({spawnPerc}%)
+                          </span>
+                        </div>
+                        <div className="flex-1 h-[1px] bg-gradient-to-r from-[#00e5ff]/30 to-transparent"></div>
+                      </div>
+                    );
+                  })()}
+                  <div className="grid grid-cols-4 gap-4">
+                    <StatCard label="Faction Subcapital" count={stats.specialSpawns.factionSubcap} total={stats.totalSites} color="blue" />
+                    <StatCard label="Capital" count={stats.specialSpawns.capital} total={stats.totalSites} color="blue" />
+                    <StatCard label="Faction Capital" count={stats.specialSpawns.factionCapital} total={stats.totalSites} color="blue" />
+                    <StatCard label="Titan" count={stats.specialSpawns.titan} total={stats.totalSites} color="blue" />
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {currentView === 'settings' && (
+              <Settings settings={settings} onSettingsChange={saveSettings} showToast={showToast} />
+            )}
+
+            {dbError && (
+              <div className="bg-red-900/50 text-red-200 p-2 text-xs rounded mt-4 border border-red-500/50">
+                DB Error: {dbError}
+              </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Auto Backup Success Modal */}
-      {isAutoBackupModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-sm p-6">
-          <div className="max-w-md w-full bg-[#141414] border-2 border-emerald-500/30 rounded-xl p-8 shadow-[0_0_50px_rgba(16,185,129,0.1)] flex flex-col items-center text-center space-y-6">
-            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center">
-              <HardDrive size={40} className="text-emerald-500" />
-            </div>
-            
-            <div className="space-y-2">
-              <h2 className="text-xl font-black text-emerald-500 uppercase tracking-tighter">
-                Automatic Backup Successful
-              </h2>
-              <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
-                Your data has been safely archived
-              </p>
-            </div>
-
-            <div className="w-full pt-4 space-y-3">
-              <button
-                onClick={async () => {
-                  if (settings.backupPath) {
-                    await invoke('open_folder', { path: settings.backupPath });
-                  }
-                }}
-                className="w-full py-3 bg-[#1a1a1a] border border-emerald-500/50 text-emerald-500 font-bold text-xs uppercase tracking-widest rounded hover:bg-emerald-500 hover:text-[#0a0a0a] transition-all flex items-center justify-center space-x-2"
-              >
-                <ExternalLink size={14} />
-                <span>Open Backup Folder</span>
-              </button>
-              
-              <button
-                onClick={() => setIsAutoBackupModalOpen(false)}
-                className="w-full py-3 bg-emerald-500 text-[#0a0a0a] font-black text-xs uppercase tracking-widest rounded hover:bg-emerald-400 transition-all"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Confirmation Modal */}
       {logToDelete !== null && (
@@ -1500,6 +1395,10 @@ export default function App() {
             )}
           </div>
         </div>
+      )}
+      </>
+      ) : (
+        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
       )}
     </div>
   );
