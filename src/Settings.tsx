@@ -168,7 +168,7 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
         <div className="space-y-2">
           <div className="flex justify-between">
             <label className="text-xs font-medium text-gray-300 uppercase tracking-wider">
-              Global Scale
+              Combat Log Scale
             </label>
             <span className="text-xs text-[#f0b419]">{settings.globalScale.toFixed(2)}x</span>
           </div>
@@ -186,7 +186,7 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
         <div className="space-y-2">
           <div className="flex justify-between">
             <label className="text-xs font-medium text-gray-300 uppercase tracking-wider">
-              Window Opacity
+              Combat Log Opacity
             </label>
             <span className="text-xs text-[#f0b419]">{Math.round(settings.windowOpacity * 100)}%</span>
           </div>

@@ -373,7 +373,7 @@ export default function App() {
 
         await invoke('apply_window_settings', { 
           alwaysOnTop: s.alwaysOnTop,
-          scale: currentView === 'statistics' ? 1.0 : s.globalScale,
+          scale: (currentView === 'statistics' || currentView === 'settings') ? 1.0 : s.globalScale,
           width,
           height
         });
@@ -894,6 +894,7 @@ export default function App() {
 
   const isLandscape = settings.orientation === 'landscape';
   const isStatistics = currentView === 'statistics';
+  const isSettings = currentView === 'settings';
   const appWidth = isStatistics ? 800 : (isLandscape ? 700 : 360);
   const appHeight = isCollapsed ? 28 : (isStatistics ? 825 : (isLandscape ? 450 : 725));
 
@@ -903,8 +904,8 @@ export default function App() {
       style={{ 
         width: `${appWidth}px`, 
         height: `${appHeight}px`,
-        transform: `scale(${isStatistics ? 1 : settings.globalScale})`, 
-        opacity: settings.windowOpacity,
+        transform: `scale(${(isStatistics || isSettings) ? 1 : settings.globalScale})`, 
+        opacity: (isStatistics || isSettings) ? 1.0 : settings.windowOpacity,
         border: '1px solid #0a0a0a',
         boxSizing: 'border-box',
         boxShadow: 'none'
