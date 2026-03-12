@@ -19,19 +19,7 @@
         "fullscreen": false,
         "transparent": true,
         "decorations": false,
-        "shadow": false,
-        "visible": false
-      },
-      {
-        "label": "splashscreen",
-        "url": "/splashscreen.html",
-        "width": 450,
-        "height": 450,
-        "transparent": true,
-        "decorations": false,
-        "shadow": false,
-        "center": true,
-        "alwaysOnTop": true
+        "shadow": false
       }
     ],
     "security": {
@@ -40,7 +28,7 @@
         {
           "identifier": "default",
           "description": "Default capability",
-          "windows": ["main", "splashscreen"],
+          "windows": ["main"],
           "permissions": [
             "core:default",
             "window-state:default",

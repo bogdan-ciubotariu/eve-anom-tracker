@@ -75,6 +75,10 @@ html, body, #root {
       transform: translateY(100%);
     }
   }
+  @keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+  }
 }
 
 .bg-scanlines {

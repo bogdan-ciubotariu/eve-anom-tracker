@@ -153,6 +153,37 @@ const Titlebar = ({ isCollapsed, onToggleCollapse }: { isCollapsed: boolean, onT
   );
 };
 
+const Splash = () => {
+  const handleMouseDown = (e: MouseEvent) => {
+    if (isTauri && e.button === 0) {
+      getCurrentWindow()?.startDragging();
+    }
+  };
+
+  return (
+    <div 
+      className="absolute inset-0 bg-[radial-gradient(circle,#1a1a1a_0%,#050505_100%)] flex flex-col items-center justify-center overflow-hidden z-[9999]"
+      onMouseDown={handleMouseDown}
+      data-tauri-drag-region
+    >
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="w-full h-full bg-[url('/app-icon.jpg')] bg-contain bg-no-repeat bg-center"></div>
+      </div>
+      <div className="absolute bottom-3 right-3 text-right z-20 pointer-events-none">
+        <div className="text-[#f0b419] text-[10px] font-black tracking-[0.2em] uppercase mb-1 drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">Loading...</div>
+        <div className="flex justify-end gap-1">
+          <div className="w-1 h-1 bg-[#f0b419] rounded-full shadow-[0_0_5px_rgba(240,180,25,0.5)] animate-[pulse_1.5s_infinite_ease-in-out]"></div>
+          <div className="w-1 h-1 bg-[#f0b419] rounded-full shadow-[0_0_5px_rgba(240,180,25,0.5)] animate-[pulse_1.5s_infinite_ease-in-out] [animation-delay:0.2s]"></div>
+          <div className="w-1 h-1 bg-[#f0b419] rounded-full shadow-[0_0_5px_rgba(240,180,25,0.5)] animate-[pulse_1.5s_infinite_ease-in-out] [animation-delay:0.4s]"></div>
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#f0b419]/10 z-20 pointer-events-none">
+        <div className="animate-[progress_3s_linear_forwards] h-full bg-[#f0b419] shadow-[0_0_10px_#f0b419]"></div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [db, setDb] = useState<Database | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -222,6 +253,14 @@ export default function App() {
       const MIN_SPLASH_TIME = 3000;
 
       try {
+        if (isTauri) {
+          try {
+            await getCurrentWindow().show();
+          } catch (e) {
+            console.error('Failed to show window initially:', e);
+          }
+        }
+
         // Load solar systems data
         if (!systemsData || !Array.isArray(systemsData)) {
           console.error('Failed to load solar systems: Invalid system data');
@@ -239,34 +278,12 @@ export default function App() {
         const elapsedTime = Date.now() - startTime;
         const remainingTime = Math.max(0, MIN_SPLASH_TIME - elapsedTime);
 
-        setTimeout(async () => {
-          if (isTauri) {
-            try {
-              const { getAllWindows } = await import('@tauri-apps/api/window');
-              const windows = await getAllWindows();
-              const splash = windows.find(w => w.label === 'splashscreen');
-              const main = windows.find(w => w.label === 'main');
-
-              if (main) {
-                await main.show();
-              }
-              if (splash) {
-                await splash.close();
-              }
-            } catch (e) {
-              console.error('Failed to manage windows:', e);
-              // Fallback: just show current window if something goes wrong
-              await getCurrentWindow().show();
-            }
-          }
+        setTimeout(() => {
           setIsAppReady(true);
         }, remainingTime);
       } catch (error) {
         console.error('Initialization failed:', error);
-        // Fallback: show main window anyway if initialization fails
-        if (isTauri) {
-          getCurrentWindow().show();
-        }
+        setIsAppReady(true);
       }
     };
 
@@ -1503,7 +1520,7 @@ export default function App() {
       )}
       </>
       ) : (
-        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+        <Splash />
       )}
     </div>
   );
