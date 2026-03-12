@@ -127,7 +127,11 @@ const Titlebar = ({ isCollapsed, onToggleCollapse }: { isCollapsed: boolean, onT
       <div className="flex h-full shrink-0">
         <button 
           onClick={onToggleCollapse}
-          className="h-full px-3 flex items-center justify-center hover:bg-[#f0b419] hover:text-[#0a0a0a] transition-colors text-gray-500"
+          className={`h-full px-3 flex items-center justify-center transition-colors ${
+            isCollapsed 
+              ? "bg-[#f0b419] text-[#0a0a0a]" 
+              : "text-gray-500 hover:bg-[#f0b419] hover:text-[#0a0a0a]"
+          }`}
           title={isCollapsed ? "Expand" : "Collapse"}
         >
           {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
