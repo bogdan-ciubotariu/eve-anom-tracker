@@ -1,21 +1,21 @@
-# EVE AnomTracker
+<div align="center">
+  <img src="public/app-icon.jpg" alt="EVE AnomTracker">
+</div>
 
 A premium, lightweight desktop overlay for EVE Online players to track combat anomaly outcomes with precision and style.
-
-![EVE AnomTracker](public/app-icon.jpg)
 
 ## 🚀 Key Features
 
 ### ⚔️ Combat Tracking
 - **One-Click Logging**: Quickly record anomaly completions with a streamlined interface.
 - **Detailed Outcomes**: Track DED Escalations, Faction Spawns, Capital Spawns, and more with specialized toggles.
-- **Location Intelligence**: Automatically associates logs with systems and regions.
+- **Location Intelligence**: Automatically associates logs with systems.
 - **Custom Site Support**: Configure your own list of anomalies to track.
 
 ### 📊 Advanced Statistics
 - **Live Success Rates**: Real-time calculation of escalation and spawn percentages.
 - **Outcome Breakdown**: Visual tally of specific encounter types (DED, Titan spawns, etc.).
-- **Activity Heartbeat**: A 30-day vertical bar chart showing your "combat heartbeat," filterable by specific site types to analyze drop rates.
+- **Activity Heartbeat**: A 30-day vertical bar chart showing your "crabbing heartbeat," filterable by specific site types to analyze drop rates.
 - **Date Filtering**: analyze your performance by day, week, month, or custom ranges.
 
 ### 🖥️ Overlay Experience
@@ -23,7 +23,6 @@ A premium, lightweight desktop overlay for EVE Online players to track combat an
 - **Adjustable Opacity**: Blend the tracker into your EVE UI for a seamless look.
 - **Dynamic Orientation**: Switch between **Portrait** (compact) and **Landscape** (expanded) layouts.
 - **Global Scaling**: Resize the entire UI to fit your monitor resolution.
-- **Cinematic Feel**: Integrated loading sequence and cybernetic audio feedback for actions.
 
 ### 💾 Data & Security
 - **Local First**: All data is stored in a private SQLite database on your machine.
