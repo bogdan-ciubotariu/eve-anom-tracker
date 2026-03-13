@@ -426,7 +426,7 @@ export default function App() {
         let width = s.orientation === 'portrait' ? 360 : 700;
         let height = s.orientation === 'portrait' ? 725 : 450;
         
-        if (currentView === 'statistics') {
+        if (currentView === 'statistics' || currentView === 'settings') {
           width = 800;
           height = 825;
         }
@@ -967,8 +967,8 @@ export default function App() {
   const isLandscape = settings.orientation === 'landscape';
   const isStatistics = currentView === 'statistics';
   const isSettings = currentView === 'settings';
-  const appWidth = isStatistics ? 800 : (isLandscape ? 700 : 360);
-  const appHeight = isCollapsed ? 28 : (isStatistics ? 825 : (isLandscape ? 450 : 725));
+  const appWidth = (isStatistics || isSettings) ? 800 : (isLandscape ? 700 : 360);
+  const appHeight = isCollapsed ? 28 : ((isStatistics || isSettings) ? 825 : (isLandscape ? 450 : 725));
 
   return (
     <div 

@@ -200,94 +200,99 @@ export default function Settings({ settings, onSettingsChange, showToast }: Sett
             className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#f0b419]"
           />
         </div>
-      </div>
 
-      <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
-        Preferred Systems
-      </h2>
-      <div className="space-y-4">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={14} className="text-gray-500" />
+        <label className="flex items-center justify-between cursor-pointer group pt-2">
+          <span className="text-xs font-medium text-gray-300 uppercase tracking-wider group-hover:text-[#f0b419] transition-colors">
+            Enable UI Sounds
+          </span>
+          <div className="relative">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={settings.enableSounds}
+              onChange={(e) => handleChange('enableSounds', e.target.checked)}
+            />
+            <div className={`block w-10 h-6 rounded-full transition-colors ${settings.enableSounds ? 'bg-[#f0b419]' : 'bg-gray-800'}`}></div>
+            <div className={`absolute left-1 top-1 bg-[#0a0a0a] w-4 h-4 rounded-full transition-transform ${settings.enableSounds ? 'transform translate-x-4' : ''}`}></div>
           </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#141414] border border-[#f0b419]/50 text-white pl-10 pr-3 py-2 rounded text-xs focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419]"
-            placeholder="Search solar systems..."
-          />
-          
-          {filteredSystems.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-[#1a1a1a] border border-[#f0b419]/30 rounded shadow-xl max-h-48 overflow-y-auto">
-              {filteredSystems.map(system => (
-                <button
-                  key={system.solarSystemID}
-                  onClick={() => addSystem(system.solarSystemName)}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#f0b419]/10 hover:text-[#f0b419] flex justify-between items-center group"
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 mt-8">
+        <div className="flex flex-col h-full">
+          <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mb-4 border-b border-[#f0b419]/30 pb-2">
+            Preferred Systems
+          </h2>
+          <div className="space-y-4 flex-1">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={14} className="text-gray-500" />
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-[#141414] border border-[#f0b419]/50 text-white pl-10 pr-3 py-2 rounded text-xs focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419]"
+                placeholder="Search solar systems..."
+              />
+              
+              {filteredSystems.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-[#1a1a1a] border border-[#f0b419]/30 rounded shadow-xl max-h-48 overflow-y-auto">
+                  {filteredSystems.map(system => (
+                    <button
+                      key={system.solarSystemID}
+                      onClick={() => addSystem(system.solarSystemName)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#f0b419]/10 hover:text-[#f0b419] flex justify-between items-center group"
+                    >
+                      <span>{system.solarSystemName} <span className="text-[10px] text-gray-500">({system.regionName})</span></span>
+                      <Plus size={12} className="opacity-0 group-hover:opacity-100" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {settings.preferredSystems.map(system => (
+                <div 
+                  key={system}
+                  className="flex items-center space-x-1 bg-[#f0b419]/10 border border-[#f0b419]/30 px-2 py-1 rounded group"
                 >
-                  <span>{system.solarSystemName} <span className="text-[10px] text-gray-500">({system.regionName})</span></span>
-                  <Plus size={12} className="opacity-0 group-hover:opacity-100" />
-                </button>
+                  <span className="text-xs text-gray-300">{system}</span>
+                  <button
+                    onClick={() => removeSystem(system)}
+                    className="text-gray-500 hover:text-red-500 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
               ))}
+              {settings.preferredSystems.length === 0 && (
+                <p className="text-[10px] text-gray-500 italic">No preferred systems added yet.</p>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {settings.preferredSystems.map(system => (
-            <div 
-              key={system}
-              className="flex items-center space-x-1 bg-[#f0b419]/10 border border-[#f0b419]/30 px-2 py-1 rounded group"
-            >
-              <span className="text-xs text-gray-300">{system}</span>
-              <button
-                onClick={() => removeSystem(system)}
-                className="text-gray-500 hover:text-red-500 transition-colors"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          {settings.preferredSystems.length === 0 && (
-            <p className="text-[10px] text-gray-500 italic">No preferred systems added yet.</p>
-          )}
+        <div className="flex flex-col h-full">
+          <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mb-4 border-b border-[#f0b419]/30 pb-2">
+            Custom Site List
+          </h2>
+          <div className="space-y-2 flex-1 flex flex-col">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+              Comma-separated list of anomaly sites
+            </p>
+            <textarea
+              value={settings.customSites}
+              onChange={(e) => handleChange('customSites', e.target.value)}
+              className="w-full flex-1 min-h-[120px] bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded text-xs focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] resize-none"
+              placeholder="Haven, Sanctum, Forsaken Hub..."
+            />
+          </div>
         </div>
       </div>
 
-      <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
-        Custom Site List
-      </h2>
-      <div className="space-y-2">
-        <p className="text-[10px] text-gray-500 uppercase tracking-wide">
-          Comma-separated list of anomaly sites
-        </p>
-        <textarea
-          value={settings.customSites}
-          onChange={(e) => handleChange('customSites', e.target.value)}
-          className="w-full h-24 bg-[#141414] border border-[#f0b419]/50 text-white p-2 rounded text-xs focus:outline-none focus:border-[#f0b419] focus:ring-1 focus:ring-[#f0b419] resize-none"
-          placeholder="Haven, Sanctum, Forsaken Hub..."
-        />
-      </div>
 
-      <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
-        Sound Settings
-      </h2>
-      <label className="flex items-center justify-between cursor-pointer group mb-8">
-        <span className="text-xs font-medium text-gray-300 uppercase tracking-wider group-hover:text-[#f0b419] transition-colors">
-          Enable UI Sounds
-        </span>
-        <div className="relative">
-          <input
-            type="checkbox"
-            className="sr-only"
-            checked={settings.enableSounds}
-            onChange={(e) => handleChange('enableSounds', e.target.checked)}
-          />
-          <div className={`block w-10 h-6 rounded-full transition-colors ${settings.enableSounds ? 'bg-[#f0b419]' : 'bg-gray-800'}`}></div>
-          <div className={`absolute left-1 top-1 bg-[#0a0a0a] w-4 h-4 rounded-full transition-transform ${settings.enableSounds ? 'transform translate-x-4' : ''}`}></div>
-        </div>
-      </label>
 
       <h2 className="text-sm font-semibold text-[#f0b419] uppercase tracking-wider mt-8 mb-4 border-b border-[#f0b419]/30 pb-2">
         Data Backup
