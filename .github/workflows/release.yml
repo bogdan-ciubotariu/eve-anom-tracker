@@ -39,10 +39,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'AnomTracker ${{ github.ref_name }}'
-          releaseBody: 'See the assets below to download and install this version.'
+          releaseName: 'AnomTracker ${{ github.ref_name }} (Beta)'
+          releaseBody: 'This is a beta version. Download the portable executable below to run the app without installation.'
           releaseDraft: false
-          prerelease: false
+          prerelease: true
 
       - name: Upload Portable Executable (Windows)
         env:

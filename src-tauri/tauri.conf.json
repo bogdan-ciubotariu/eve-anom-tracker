@@ -1,6 +1,6 @@
 {
   "productName": "EVE AnomTracker",
-  "version": "0.1.2",
+  "version": "0.4.0",
   "identifier": "com.anomtracker.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -54,7 +54,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
