@@ -91,3 +91,8 @@ html, body, #root {
   );
   background-size: 100% 4px;
 }
+
+::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(100%) contrast(100%);
+  cursor: pointer;
+}

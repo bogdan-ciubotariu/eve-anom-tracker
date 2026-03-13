@@ -56,6 +56,32 @@ fn apply_window_settings(window: tauri::Window, always_on_top: bool, scale: f64,
     let _ = window.set_size(tauri::LogicalSize::new(width * scale, height * scale));
 }
 
+/// Returns the OS short date format string (e.g. "dd.MM.yyyy", "M/d/yyyy")
+/// On Windows reads from registry: HKCU\Control Panel\International -> sShortDate
+/// Falls back to ISO on other platforms or on error.
+#[tauri::command]
+fn get_system_date_format() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        // Use PowerShell for cleaner registry access
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "Get-ItemPropertyValue 'HKCU:\\Control Panel\\International' -Name sShortDate"
+            ])
+            .output();
+        if let Ok(out) = output {
+            let fmt = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !fmt.is_empty() {
+                return fmt;
+            }
+        }
+    }
+    "yyyy-MM-dd".to_string()
+}
+
 fn get_settings_file_path() -> PathBuf {
     let mut path = env::current_exe().expect("Failed to get current exe path");
     path.pop(); // Remove the .exe name
@@ -219,7 +245,8 @@ pub fn run() {
             open_folder,
             apply_window_settings, 
             load_settings, 
-            save_settings
+            save_settings,
+            get_system_date_format
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

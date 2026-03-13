@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Database from '@tauri-apps/plugin-sql';
 import { format, subDays } from 'date-fns';
-import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown, Activity, ExternalLink, HardDrive } from 'lucide-react';
+import { Trash2, Menu, X, Crosshair, BarChart2, Settings as SettingsIcon, Minus, ChevronUp, ChevronDown, Activity, ExternalLink, HardDrive, Calendar } from 'lucide-react';
 import Settings, { AppSettings } from './Settings';
 
 interface AnomLog {
@@ -28,6 +28,8 @@ interface AnomLog {
 interface DailyStat {
   date: string;
   count: number;
+  escalations: number;
+  spawns: number;
 }
 
 interface StatsData {
@@ -223,6 +225,7 @@ export default function App() {
   const [isAutoBackupModalOpen, setIsAutoBackupModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [systemDateFormat, setSystemDateFormat] = useState<string>('yyyy-MM-dd');
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -232,6 +235,20 @@ export default function App() {
     toastTimeoutRef.current = setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  // Format a yyyy-MM-dd string using the actual OS date format from Windows registry
+  const formatLocalDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    // Replace Windows format tokens with actual values
+    return systemDateFormat
+      .replaceAll('yyyy', year)
+      .replaceAll('yy', year.slice(2))
+      .replaceAll('MM', month.padStart(2, '0'))
+      .replaceAll('M', String(parseInt(month, 10)))
+      .replaceAll('dd', day.padStart(2, '0'))
+      .replaceAll('d', String(parseInt(day, 10)));
   };
 
   // Toggles
@@ -248,6 +265,24 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Attempt to match system locale for date formatting
+    try {
+      const systemLocale = new Intl.DateTimeFormat().resolvedOptions().locale;
+      document.documentElement.lang = systemLocale;
+    } catch (e) {
+      document.documentElement.lang = navigator.language;
+    }
+
+    // Fetch real OS date format from Rust (reads Windows registry)
+    if (isTauri) {
+      invoke<string>('get_system_date_format').then(fmt => {
+        console.log('System Date Format:', fmt);
+        if (fmt) setSystemDateFormat(fmt);
+      }).catch((err) => {
+        console.error('Failed to get system date format:', err);
+      });
+    }
+
     // Load persisted site type and system
     const savedSiteType = localStorage.getItem('anomtracker_site_type');
     if (savedSiteType && siteTypes.includes(savedSiteType)) {
@@ -654,7 +689,15 @@ export default function App() {
 
   const fetchStats = async (database: any, filter: string = 'All') => {
     try {
-      let dailyQuery = "SELECT date(timestamp, 'localtime') as date, COUNT(*) as count FROM anom_logs WHERE timestamp >= date('now', 'localtime', '-30 days')";
+      let dailyQuery = `
+        SELECT 
+          date(timestamp, 'localtime') as date, 
+          COUNT(*) as count,
+          SUM(CASE WHEN was_ded_escalation=1 OR was_occ_mine_escalation=1 OR was_cap_stag_escalation=1 OR was_shld_starb_escalation=1 OR was_attack_site_escalation=1 THEN 1 ELSE 0 END) as escalations,
+          SUM(CASE WHEN was_faction_npc_spawn=1 OR was_capital_spawn=1 OR was_faction_capital_spawn=1 OR was_titan_spawn=1 THEN 1 ELSE 0 END) as spawns
+        FROM anom_logs 
+        WHERE timestamp >= date('now', 'localtime', '-30 days')
+      `;
       const dailyParams: any[] = [];
       
       if (filter !== 'All') {
@@ -1242,12 +1285,43 @@ export default function App() {
                     >
                       <option value="All">All Time</option>
                       <option value="Today">Today</option>
-                      <option value="Yesterday">Yesterday</option>
-                      <option value="Week">Last Week</option>
-                      <option value="Month">Last Month</option>
-                    </select>
-                  </div>
-                </div>
+                       <option value="Yesterday">Yesterday</option>
+                       <option value="Week">Last Week</option>
+                       <option value="Month">Last Month</option>
+                       <option value="Custom">Custom Range</option>
+                     </select>
+                   </div>
+ 
+                   {dateRangeType === 'Custom' && (
+                     <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                       <div className="relative group">
+                         <input
+                           type="date"
+                           value={customStartDate}
+                           onChange={(e) => setCustomStartDate(e.target.value)}
+                           className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                         />
+                         <div className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-[10px] p-1.5 rounded w-[89px] flex justify-between items-center group-hover:border-[#f0b419] transition-colors">
+                           <span>{customStartDate ? formatLocalDate(customStartDate) : 'From...'}</span>
+                           <Calendar size={10} className="opacity-50" />
+                         </div>
+                       </div>
+                       <span className="text-gray-500 text-[10px]">to</span>
+                       <div className="relative group">
+                         <input
+                           type="date"
+                           value={customEndDate}
+                           onChange={(e) => setCustomEndDate(e.target.value)}
+                           className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                         />
+                         <div className="bg-[#141414] border border-[#f0b419]/30 text-[#f0b419] text-[10px] p-1.5 rounded w-[89px] flex justify-between items-center group-hover:border-[#f0b419] transition-colors">
+                           <span>{customEndDate ? formatLocalDate(customEndDate) : 'To...'}</span>
+                           <Calendar size={10} className="opacity-50" />
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
 
                 {/* Header Stats */}
                 <div className="grid grid-cols-2 gap-6">
@@ -1352,16 +1426,41 @@ export default function App() {
                         });
                         const maxCount = Math.max(...dailyStats.map(d => d.count), 1);
                         
-                        return days.map(dayStr => {
-                          const stat = dailyStats.find(s => s.date === dayStr);
-                          const count = stat ? stat.count : 0;
-                          const heightPerc = (count / maxCount) * 100;
-                          
-                          return (
-                            <div key={dayStr} className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-[#f0b419]/50 text-[#f0b419] text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 pointer-events-none shadow-2xl transition-opacity flex flex-col items-center">
-                                <span className="font-bold">{format(new Date(dayStr), 'EEEE, MMM dd')}</span>
-                                {count > 0 && <span className="text-[9px] opacity-70">{count} sites</span>}
+                         return days.map((dayStr, index) => {
+                           const stat = dailyStats.find(s => s.date === dayStr);
+                           const count = stat ? stat.count : 0;
+                           const maxCountVal = Math.max(...dailyStats.map(d => d.count), 1);
+                           const heightPerc = (count / maxCountVal) * 100;
+                           
+                           const isLeftEdge = index === 0;
+                           const isRightEdge = index === 29;
+                           
+                           return (
+                             <div 
+                               key={dayStr} 
+                               className="flex-1 flex flex-col justify-end items-center group relative h-full cursor-pointer"
+                               onClick={() => {
+                                 setDateRangeType('Custom');
+                                 setCustomStartDate(dayStr);
+                                 setCustomEndDate(dayStr);
+                               }}
+                             >
+                               <div className={`absolute -top-16 ${isLeftEdge ? 'left-0' : isRightEdge ? 'right-0' : 'left-1/2 -translate-x-1/2'} bg-[#1a1a1a] border border-[#f0b419]/50 text-[#f0b419] text-[10px] px-3 py-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 pointer-events-none shadow-2xl transition-all duration-300 transform group-hover:-translate-y-1 flex flex-col ${isLeftEdge ? 'items-start' : isRightEdge ? 'items-end' : 'items-center'} min-w-[120px]`}>
+                                <span className="font-bold border-b border-[#f0b419]/30 pb-1 mb-1 w-full text-center">{format(new Date(dayStr), 'EEEE, MMM dd')}</span>
+                                <div className="flex flex-col w-full space-y-0.5">
+                                  <div className="flex justify-between items-center space-x-4">
+                                    <span className="text-gray-400 text-[9px]">Total Sites:</span>
+                                    <span className="font-bold">{count}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center space-x-4 text-[#00ff7f]">
+                                    <span className="opacity-70 text-[9px]">Escalations:</span>
+                                    <span className="font-bold">{stat?.escalations || 0}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center space-x-4 text-[#00e5ff]">
+                                    <span className="opacity-70 text-[9px]">Special Spawns:</span>
+                                    <span className="font-bold">{stat?.spawns || 0}</span>
+                                  </div>
+                                </div>
                               </div>
                               {count > 0 && (
                                 <div className="text-[9px] font-bold text-[#f0b419]/70 group-hover:text-[#f0b419] mb-1 transition-colors z-10">
