@@ -100,6 +100,16 @@ const DEFAULT_SETTINGS: AppSettings = {
   preferredSystems: [],
 };
 
+// Bootstrap key layout settings synchronously from localStorage to avoid
+// a flicker between portrait (default) and the user's saved orientation.
+function getBootstrapSettings(): AppSettings {
+  try {
+    const cached = localStorage.getItem('anomtracker_bootstrap');
+    if (cached) return { ...DEFAULT_SETTINGS, ...JSON.parse(cached) };
+  } catch {}
+  return DEFAULT_SETTINGS;
+}
+
 type ViewState = 'combat' | 'statistics' | 'settings';
 
 const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window || '__TAURI_IPC__' in window);
@@ -193,7 +203,7 @@ const Splash = () => {
 
 export default function App() {
   const [db, setDb] = useState<Database | null>(null);
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(getBootstrapSettings());
   const [currentView, setCurrentView] = useState<ViewState>('combat');
   const [isCollapsed, setIsCollapsed] = useState(false);
   
@@ -294,12 +304,19 @@ export default function App() {
       const MIN_SPLASH_TIME = 3000;
 
       try {
+        // Load settings and apply initial window state before showing
         if (isTauri) {
+          await loadSettings();
+          setIsSettingsLoaded(true);
+          // Give the OS and React a moment to apply the new window size and layout
+          await new Promise(resolve => setTimeout(resolve, 150));
           try {
             await getCurrentWindow().show();
           } catch (e) {
-            console.error('Failed to show window initially:', e);
+            console.error('Failed to show window:', e);
           }
+        } else {
+          setIsSettingsLoaded(true);
         }
 
         // Load solar systems data
@@ -308,12 +325,8 @@ export default function App() {
           showToast('System data failed to load. Please check installation.');
         }
 
-        // Run initialization in parallel
-        await Promise.all([
-          initDb(),
-          loadSettings()
-        ]);
-        setIsSettingsLoaded(true);
+        // Initialize database
+        await initDb();
 
         // Calculate remaining time for splash screen
         const elapsedTime = Date.now() - startTime;
@@ -343,7 +356,15 @@ export default function App() {
       
       const newSettings = { ...DEFAULT_SETTINGS, ...loadedSettings };
       setSettings(newSettings);
-      applySettings(newSettings);
+      await applySettings(newSettings);
+      
+      // Persist layout-critical settings so first render can bootstrap without flicker
+      localStorage.setItem('anomtracker_bootstrap', JSON.stringify({
+        orientation: newSettings.orientation,
+        globalScale: newSettings.globalScale,
+        windowOpacity: newSettings.windowOpacity,
+        alwaysOnTop: newSettings.alwaysOnTop,
+      }));
       
       // Check for auto-backup after settings are loaded
       if (isTauri) {
@@ -358,6 +379,14 @@ export default function App() {
   const saveSettings = async (newSettings: AppSettings) => {
     setSettings(newSettings);
     applySettings(newSettings);
+    
+    // Keep the bootstrap cache up to date so next launch is flicker-free
+    localStorage.setItem('anomtracker_bootstrap', JSON.stringify({
+      orientation: newSettings.orientation,
+      globalScale: newSettings.globalScale,
+      windowOpacity: newSettings.windowOpacity,
+      alwaysOnTop: newSettings.alwaysOnTop,
+    }));
     
     try {
       if (isTauri) {

@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -64,8 +65,14 @@ fn get_system_date_format() -> String {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        
+        // CREATE_NO_WINDOW flag
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
         // Use PowerShell for cleaner registry access
         let output = Command::new("powershell")
+            .creation_flags(CREATE_NO_WINDOW)
             .args([
                 "-NoProfile",
                 "-Command",
@@ -236,6 +243,36 @@ pub fn run() {
                 .add_migrations(&db_url, get_migrations())
                 .build(),
         )
+        .setup(|app| {
+            // Read saved settings and apply correct window size BEFORE showing,
+            // to eliminate the portrait-to-landscape flicker on startup.
+            let window = app.get_webview_window("main").unwrap();
+
+            let settings_path = get_settings_file_path();
+            if settings_path.exists() {
+                if let Ok(json) = fs::read_to_string(&settings_path) {
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json) {
+                        let orientation = parsed["orientation"].as_str().unwrap_or("portrait");
+                        let always_on_top = parsed["alwaysOnTop"].as_bool().unwrap_or(false);
+                        let scale = parsed["globalScale"].as_f64().unwrap_or(1.0);
+
+                        let (width, height) = if orientation == "landscape" {
+                            (700.0_f64, 450.0_f64)
+                        } else {
+                            (360.0_f64, 725.0_f64)
+                        };
+
+                        let _ = window.set_size(tauri::LogicalSize::new(
+                            (width * scale) as u32,
+                            (height * scale) as u32,
+                        ));
+                        let _ = window.set_always_on_top(always_on_top);
+                    }
+                }
+            }
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet, 
             get_db_path, 
